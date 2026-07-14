@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { pathToFileURL } from 'url';
 
 export default defineConfig({
   testDir: './tests',
@@ -8,7 +9,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'file:///Users/evancrabtree/Documents/GITHUB/clocktower/Clocktower-Town-Square-Display-And-Controller/',
+    baseURL: pathToFileURL(__dirname + '/').href,
     trace: 'on-first-retry',
     viewport: { width: 1920, height: 1080 },
   },

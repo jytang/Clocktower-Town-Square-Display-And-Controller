@@ -93,16 +93,18 @@ if [ -f .gitignore ]; then
         echo "# Auto-generated IP-specific files" >> .gitignore
         echo "display_*.html" >> .gitignore
         echo "controller_*.html" >> .gitignore
+        echo "lobby_*.html" >> .gitignore
         echo "Added IP-specific files to .gitignore"
     fi
 else
     echo "# Auto-generated IP-specific files" > .gitignore
     echo "display_*.html" >> .gitignore
     echo "controller_*.html" >> .gitignore
+    echo "lobby_*.html" >> .gitignore
     echo "Created .gitignore with IP-specific files"
 fi
 
-for FILE in display.html controller.html; do
+for FILE in display.html controller.html lobby.html; do
     if [ -f "$FILE" ]; then
         # Check if file contains YOUR_IP placeholder
         if grep -q "YOUR_IP" "$FILE"; then
@@ -147,6 +149,7 @@ echo ""
 echo "Setup complete!"
 echo "TV Display URL: http://$IP:8000/display_${IP//./_}.html"
 echo "Controller URL: http://$IP:8000/controller_${IP//./_}.html"
+echo "Player Lobby URL (share with phones): http://$IP:8000/lobby_${IP//./_}.html"
 echo "Keep this terminal open while playing."
 echo "Press Ctrl+C to gracefully stop both servers."
 

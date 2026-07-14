@@ -16,6 +16,9 @@ const mimeTypes = {
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
   '.mp4': 'video/mp4',
   '.woff': 'application/font-woff',
   '.ttf': 'application/font-ttf',
@@ -28,7 +31,7 @@ const mimeTypes = {
 const server = http.createServer((req, res) => {
   // Parse URL
   const parsedUrl = new URL(req.url, `http://${IP}:${PORT}`);
-  let pathname = parsedUrl.pathname;
+  let pathname = decodeURIComponent(parsedUrl.pathname);
   
   console.log(`Request received: ${req.method} ${pathname}`);
   
@@ -36,6 +39,7 @@ const server = http.createServer((req, res) => {
   if (pathname === '/') {
     const displayFile = `display_${IP.replace(/\./g, '_')}.html`;
     const controllerFile = `controller_${IP.replace(/\./g, '_')}.html`;
+    const lobbyFile = `lobby_${IP.replace(/\./g, '_')}.html`;
     
     const html = `<!DOCTYPE html>
     <html>
@@ -72,6 +76,8 @@ const server = http.createServer((req, res) => {
             }
             .display { background: #dc2626; }
             .display:hover { background: #b91c1c; }
+            .lobby { background: #059669; }
+            .lobby:hover { background: #047857; }
             h1 { color: #fbbf24; }
         </style>
     </head>
@@ -81,6 +87,7 @@ const server = http.createServer((req, res) => {
         <div class="links">
             <a href="/${displayFile}" class="display">TV Display</a>
             <a href="/${controllerFile}">Controller</a>
+            <a href="/${lobbyFile}" class="lobby">Player Lobby</a>
         </div>
     </body>
     </html>`;
@@ -90,6 +97,22 @@ const server = http.createServer((req, res) => {
     return;
   }
   
+  // API: list sound files in a category so the display can pick one at random
+  // e.g. /api/sounds/morning-sounds -> ["morning-sounds/foo.mp3", ...]
+  const soundMatch = pathname.match(/^\/api\/sounds\/([a-z0-9-]+-sounds)$/);
+  if (soundMatch) {
+    const dir = path.join(__dirname, 'assets', soundMatch[1]);
+    fs.readdir(dir, (err, files) => {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      if (err) { res.end('[]'); return; }
+      const audio = files
+        .filter(f => /\.(mp3|ogg|wav|m4a)$/i.test(f))
+        .map(f => `assets/${soundMatch[1]}/${f}`);
+      res.end(JSON.stringify(audio));
+    });
+    return;
+  }
+
   // Construct full file path
   const filePath = path.join(__dirname, pathname);
   console.log(`Looking for file: ${filePath}`);
@@ -97,8 +120,12 @@ const server = http.createServer((req, res) => {
   // Check if file exists and is one of our IP-specific files or favicon
   const displayFile = `display_${IP.replace(/\./g, '_')}.html`;
   const controllerFile = `controller_${IP.replace(/\./g, '_')}.html`;
-  
-  if (fs.existsSync(filePath) && (pathname.includes(displayFile) || pathname.includes(controllerFile) || pathname === '/favicon.ico')) {
+  const lobbyFile = `lobby_${IP.replace(/\./g, '_')}.html`;
+
+  // Allow audio assets under /assets/morning-sounds and /assets/night-sounds
+  const isSoundAsset = /^\/assets\/[a-z0-9-]+-sounds\/[^/]+\.(mp3|ogg|wav|m4a)$/i.test(pathname);
+
+  if (fs.existsSync(filePath) && (pathname.includes(displayFile) || pathname.includes(controllerFile) || pathname.includes(lobbyFile) || pathname === '/favicon.ico' || isSoundAsset)) {
     console.log(`Serving file: ${pathname}`);
     // Get file extension
     const ext = path.parse(filePath).ext;

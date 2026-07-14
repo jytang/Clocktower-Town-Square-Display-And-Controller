@@ -58,5 +58,6 @@ build/
 # Auto-generated IP-specific files
 display_*.html
 controller_*.html
+lobby_*.html
 playwright-report/index.html
 /test-results

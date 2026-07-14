@@ -20,6 +20,11 @@
     min-height: 100vh;
     padding: 20px;
     position: relative;
+    transition: background 1s ease;
+  }
+
+  body.day-theme {
+    background: linear-gradient(135deg, #2a4a3a 0%, #3a5f4a 50%, #4a6f5a 100%);
   }
 
   body::before {
@@ -184,6 +189,88 @@
     box-shadow: 0 12px 48px rgba(139, 69, 19, 0.2);
   }
 
+  .player-card.selected {
+    border-color: #d4af37;
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+  }
+
+  .player-card.dragging {
+    opacity: 0.4;
+  }
+
+  .player-card.drag-over {
+    border-color: #90ee90;
+    box-shadow: 0 0 20px rgba(144, 238, 144, 0.4);
+  }
+
+  .drag-handle {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #a08060;
+    font-size: 1.2em;
+    cursor: grab;
+    user-select: none;
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .select-hint {
+    font-size: 0.85em;
+    color: #a08060;
+    font-style: italic;
+  }
+
+  .status-badge.executed {
+    background: rgba(255, 140, 0, 0.2);
+    border-color: rgba(255, 140, 0, 0.5);
+    color: #ff8c00;
+  }
+
+  .status-badge.killed {
+    background: rgba(178, 34, 34, 0.25);
+    border-color: rgba(178, 34, 34, 0.5);
+    color: #ff6b6b;
+  }
+
+  .status-badge.nominator {
+    background: rgba(0, 191, 255, 0.2);
+    border-color: rgba(0, 191, 255, 0.4);
+    color: #00bfff;
+  }
+
+  .status-badge.nominee {
+    background: rgba(255, 107, 107, 0.2);
+    border-color: rgba(255, 107, 107, 0.4);
+    color: #ff6b6b;
+  }
+
+  .nominate-panel {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(139, 69, 19, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nominate-panel label {
+    font-family: 'Cinzel', serif;
+    color: #00bfff;
+    font-size: 0.9em;
+  }
+
+  .nominate-panel select {
+    width: 100%;
+  }
+
+  .nominate-panel-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
   .order-controls {
     position: absolute;
     top: 10px;
@@ -274,6 +361,12 @@
 
   .player-actions {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .action-row {
+    display: flex;
     gap: 8px;
     flex-wrap: wrap;
   }
@@ -311,6 +404,104 @@
   .btn.danger:hover {
     box-shadow: 0 4px 20px rgba(220, 20, 60, 0.3);
     border-color: #dc143c;
+  }
+
+  /* Execute = town vote (orange), Kill = demon/night (red) */
+  .btn.execute {
+    background: linear-gradient(135deg, rgba(255, 140, 0, 0.85), rgba(200, 100, 0, 0.85));
+    border-color: rgba(255, 165, 0, 0.5);
+  }
+
+  .btn.execute:hover {
+    box-shadow: 0 4px 20px rgba(255, 140, 0, 0.4);
+    border-color: #ff8c00;
+  }
+
+  .btn.kill {
+    background: linear-gradient(135deg, rgba(178, 34, 34, 0.85), rgba(110, 0, 0, 0.85));
+    border-color: rgba(220, 20, 60, 0.5);
+  }
+
+  .btn.kill:hover {
+    box-shadow: 0 4px 20px rgba(220, 20, 60, 0.4);
+    border-color: #dc143c;
+  }
+
+  .end-game-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 12px;
+  }
+
+  .btn.end-good {
+    background: linear-gradient(135deg, rgba(255, 200, 80, 0.85), rgba(200, 150, 40, 0.85));
+    border-color: rgba(255, 215, 0, 0.5);
+    color: #2a2410;
+    font-weight: 700;
+  }
+  .btn.end-good:hover {
+    box-shadow: 0 4px 20px rgba(255, 200, 80, 0.4);
+    border-color: #ffd700;
+  }
+
+  .btn.end-evil {
+    background: linear-gradient(135deg, rgba(150, 20, 20, 0.9), rgba(80, 0, 0, 0.9));
+    border-color: rgba(220, 20, 60, 0.5);
+    font-weight: 700;
+  }
+  .btn.end-evil:hover {
+    box-shadow: 0 4px 20px rgba(220, 20, 60, 0.45);
+    border-color: #dc143c;
+  }
+
+  .status-badge {
+    transition: all 0.2s ease;
+  }
+
+  .status-badge:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.25);
+  }
+
+  /* Avatar token in the card header */
+  .player-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .player-avatar {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 1.05em;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.2), 0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+
+  .player-card.dead .player-avatar {
+    filter: grayscale(0.7) brightness(0.65);
+  }
+
+  .player-header .player-name {
+    margin-bottom: 0;
+  }
+
+  .player-pronouns {
+    font-size: 0.8em;
+    color: #a08060;
+    font-style: italic;
+    margin-top: 2px;
   }
 
   .add-player-section {
@@ -417,6 +608,39 @@
     padding: 10px 15px;
     font-size: 0.9em;
     z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .refresh-btn {
+    background: rgba(139, 69, 19, 0.35);
+    border: 1px solid rgba(212, 180, 131, 0.5);
+    color: #d4b483;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 0.85em;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .refresh-btn:hover {
+    background: rgba(139, 69, 19, 0.6);
+    border-color: rgba(212, 180, 131, 0.9);
+    color: #fff;
+  }
+
+  .connection-status.disconnected .refresh-btn {
+    background: rgba(220, 20, 60, 0.3);
+    border-color: rgba(255, 107, 107, 0.7);
+    color: #ff6b6b;
+    animation: refresh-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes refresh-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+    50%      { box-shadow: 0 0 0 5px rgba(255, 107, 107, 0); }
   }
 
   .connection-status.connected {
@@ -451,6 +675,37 @@
     color: #ffffff;
   }
 
+  .audio-controls {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(139, 69, 19, 0.3);
+    text-align: center;
+  }
+
+  .audio-controls .section-title {
+    font-size: 1.3em;
+    margin-bottom: 15px;
+  }
+
+  .now-playing {
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    color: #d4b483;
+    font-style: italic;
+  }
+
+  .now-playing.playing::before {
+    content: "🎶 ";
+    font-style: normal;
+  }
+
+  .audio-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
   .on-block-controls {
     margin-top: 15px;
     padding-top: 15px;
@@ -481,6 +736,37 @@
     font-size: 1em;
   }
 
+  .vote-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .vote-step-btn {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 1.5em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .vote-step-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .vote-step-value {
+    min-width: 2ch;
+    text-align: center;
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #ffd700;
+  }
+
   @media (max-width: 768px) {
     h1 {
       font-size: 2em;
@@ -508,7 +794,10 @@
 </style>
 </head>
 <body>
-<div class="connection-status" id="connectionStatus">Connecting...</div>
+<div class="connection-status" id="connectionStatus">
+  <span id="connectionText">Connecting...</span>
+  <button id="refreshBtn" class="refresh-btn" onclick="location.reload()" title="Reload to reconnect">⟳ Refresh</button>
+</div>
 
 <div class="container">
   <header>
@@ -526,6 +815,24 @@
         </select>
         <input type="number" id="phaseNumber" min="1" value="1">
         <button class="btn btn-primary" id="nextPhaseBtn">Next Time</button>
+      </div>
+      <div class="phase-controls-row end-game-row">
+        <button class="btn end-good" id="goodWinsBtn">☀️ Good Wins</button>
+        <button class="btn end-evil" id="evilWinsBtn">🩸 Evil Wins</button>
+      </div>
+      <div class="phase-controls-row">
+        <button class="btn danger" id="newGameBtn">🔄 New Game</button>
+      </div>
+    </section>
+
+    <section class="audio-controls">
+      <h2 class="section-title">🎵 Sound</h2>
+      <div id="nowPlaying" class="now-playing">Nothing playing</div>
+      <div class="audio-buttons">
+        <button class="btn" id="audioChangeBtn">🔀 Change</button>
+        <button class="btn" id="audioRestartBtn">⏮ Restart</button>
+        <button class="btn" id="audioFadeBtn">🔉 Fade Out</button>
+        <button class="btn danger" id="audioStopBtn">⏹ Stop</button>
       </div>
     </section>
 
@@ -574,8 +881,12 @@ const bulkImportBtn = document.getElementById("bulkImportBtn");
 const clearBulkBtn = document.getElementById("clearBulkBtn");
 
 let players = [];
-let state = { players: [], onBlockPlayer: null, onBlockVotes: 0, nominatedPlayer: null };
+let state = { players: [], onBlockPlayer: null, onBlockVotes: 0, nominatedPlayer: null, nominatorPlayer: null, audioCmd: null, nowPlaying: null, gameResult: null };
 let previousPhase = null;
+let selectedPlayer = null;
+let nominatingPlayer = null; // index of player whose nominate panel is open
+let blockingPlayer = null;   // index of player whose put-on-block vote picker is open
+let dragIndex = null;
 
 // Replace with your server IP
 const ws = new WebSocket('ws://YOUR_IP:8080');
@@ -584,12 +895,13 @@ const ws = new WebSocket('ws://YOUR_IP:8080');
 phaseSelect.value = 'Night';
 phaseNumber.value = '1';
 
+const connectionText = document.getElementById("connectionText");
 function updateConnectionStatus(connected) {
   if (connected) {
-    connectionStatus.textContent = 'Connected';
+    connectionText.textContent = 'Connected';
     connectionStatus.className = 'connection-status connected';
   } else {
-    connectionStatus.textContent = 'Disconnected';
+    connectionText.textContent = 'Disconnected';
     connectionStatus.className = 'connection-status disconnected';
   }
 }
@@ -615,9 +927,7 @@ ws.onmessage = (msg) => {
   if (data.phase) {
     // Clear nominated and on-block when transitioning to Night
     if (previousPhase === 'Day' && data.phase === 'Night') {
-      state.onBlockPlayer = null;
-      state.onBlockVotes = 0;
-      state.nominatedPlayer = null;
+      clearDayState();
     }
     state.phase = data.phase;
     phaseSelect.value = data.phase;
@@ -627,9 +937,24 @@ ws.onmessage = (msg) => {
   if (data.onBlockPlayer !== undefined) state.onBlockPlayer = data.onBlockPlayer;
   if (data.onBlockVotes !== undefined) state.onBlockVotes = data.onBlockVotes;
   if (data.nominatedPlayer !== undefined) state.nominatedPlayer = data.nominatedPlayer;
-  
+  if (data.nominatorPlayer !== undefined) state.nominatorPlayer = data.nominatorPlayer;
+  if (data.nowPlaying !== undefined) { state.nowPlaying = data.nowPlaying; renderNowPlaying(); }
+
   renderPlayers();
 };
+
+// Show what the display is currently playing
+function renderNowPlaying() {
+  const el = document.getElementById('nowPlaying');
+  if (!el) return;
+  if (state.nowPlaying) {
+    el.textContent = state.nowPlaying;
+    el.classList.add('playing');
+  } else {
+    el.textContent = 'Nothing playing';
+    el.classList.remove('playing');
+  }
+}
 
 function sendUpdate() {
   const data = {
@@ -638,7 +963,10 @@ function sendUpdate() {
     phaseNumber: Number(phaseNumber.value),
     onBlockPlayer: state.onBlockPlayer,
     onBlockVotes: state.onBlockVotes,
-    nominatedPlayer: state.nominatedPlayer
+    nominatedPlayer: state.nominatedPlayer,
+    nominatorPlayer: state.nominatorPlayer,
+    audioCmd: state.audioCmd,
+    gameResult: state.gameResult
   };
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(data));
@@ -646,54 +974,208 @@ function sendUpdate() {
   renderPlayers();
 }
 
+// Send an audio command to the display. Nonce makes each press distinct so the
+// display fires it exactly once (state is rebroadcast on every update).
+let audioNonce = 0;
+function sendAudioCommand(action) {
+  state.audioCmd = { action, nonce: ++audioNonce };
+  sendUpdate();
+}
+
+// Declare the game's winner — the display shows a full-screen victory banner.
+// Nonce-gated like audio so each press triggers the banner exactly once.
+let resultNonce = 0;
+function declareWinner(winner) {
+  state.gameResult = { winner, nonce: ++resultNonce };
+  sendUpdate();
+}
+
+// Clear all day-scoped state: block, nomination, and per-player nominate flags
+function clearDayState() {
+  state.onBlockPlayer = null;
+  state.onBlockVotes = 0;
+  state.nominatedPlayer = null;
+  state.nominatorPlayer = null;
+  state.players.forEach(p => { p.hasNominated = false; p.hasBeenNominated = false; });
+  nominatingPlayer = null;
+}
+
+// Mint a stable, unique player id. Names are editable, so id (not name) is the
+// identity used by the lobby, the display's transient FX maps, and join chimes.
+function newPlayerId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+// Deterministic avatar color + initials from a name (mirrors the display)
+function avatarColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return `hsl(${h}, 45%, 42%)`;
+}
+
+function initials(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Minimum votes needed to put someone on the block: half the living players,
+// rounded up (a simple majority). This is the default and the floor for the picker.
+function minVotesNeeded() {
+  const alive = state.players.filter(p => p.alive).length;
+  return Math.ceil(alive / 2);
+}
+
+// A [- value +] vote stepper, clamped to [min, max]. `onChange(value)` fires on
+// each tap. Returns the container element. The number display updates in place.
+function buildVoteStepper(initial, min, max, onChange) {
+  let value = Math.min(Math.max(initial, min), max);
+  const wrap = document.createElement("div");
+  wrap.className = "vote-stepper";
+
+  const dec = document.createElement("button");
+  dec.className = "btn vote-step-btn";
+  dec.textContent = "−";
+
+  const display = document.createElement("span");
+  display.className = "vote-step-value";
+
+  const inc = document.createElement("button");
+  inc.className = "btn vote-step-btn";
+  inc.textContent = "+";
+
+  const refresh = () => {
+    display.textContent = value;
+    dec.disabled = value <= min;
+    inc.disabled = value >= max;
+  };
+  const set = (v) => {
+    value = Math.min(Math.max(v, min), max);
+    refresh();
+    onChange(value);
+  };
+  dec.onclick = (e) => { e.stopPropagation(); set(value - 1); };
+  inc.onclick = (e) => { e.stopPropagation(); set(value + 1); };
+
+  wrap.appendChild(dec);
+  wrap.appendChild(display);
+  wrap.appendChild(inc);
+  refresh();
+  return wrap;
+}
+
 
 
 function renderPlayers() {
+  // Match display theme: green by day, dark by night
+  document.body.classList.toggle('day-theme', phaseSelect.value === 'Day');
   playersContainer.innerHTML = "";
   state.players.forEach((p, index) => {
+    const isSelected = selectedPlayer === index;
     const card = document.createElement("div");
-    card.className = `player-card ${!p.alive ? 'dead' : ''} ${state.onBlockPlayer === index ? 'on-block' : ''} ${state.nominatedPlayer === index ? 'nominated' : ''}`;
+    card.className = `player-card ${!p.alive ? 'dead' : ''} ${state.onBlockPlayer === index ? 'on-block' : ''} ${state.nominatedPlayer === index ? 'nominated' : ''} ${isSelected ? 'selected' : ''}`;
     card.dataset.index = index;
+
+    // Click card to select/deselect (reveals action buttons).
+    // Ignore clicks on interactive children so dropdowns/inputs don't collapse the card.
+    card.onclick = (e) => {
+      if (e.target.closest('button, select, input, label, option')) return;
+      selectedPlayer = isSelected ? null : index;
+      if (!isSelected) nominatingPlayer = null;
+      renderPlayers();
+    };
+
+    // Drag-to-reorder
+    card.draggable = true;
+    card.ondragstart = (e) => { dragIndex = index; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; };
+    card.ondragend = () => { dragIndex = null; renderPlayers(); };
+    card.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragIndex !== index) card.classList.add('drag-over'); };
+    card.ondragleave = () => card.classList.remove('drag-over');
+    card.ondrop = (e) => { e.preventDefault(); card.classList.remove('drag-over'); reorderPlayer(dragIndex, index); };
+
+    // Drag handle hint
+    const dragHandle = document.createElement("div");
+    dragHandle.className = "drag-handle";
+    dragHandle.innerHTML = "⠿";
+    card.appendChild(dragHandle);
 
     // Add order controls
     const orderControls = document.createElement("div");
     orderControls.className = "order-controls";
-    
+
     const moveUpBtn = document.createElement("button");
     moveUpBtn.className = "order-btn";
     moveUpBtn.innerHTML = "↑";
     moveUpBtn.disabled = index === 0;
     moveUpBtn.onclick = (e) => { e.stopPropagation(); movePlayer(index, -1); };
-    
+
     const moveDownBtn = document.createElement("button");
     moveDownBtn.className = "order-btn";
     moveDownBtn.innerHTML = "↓";
     moveDownBtn.disabled = index === state.players.length - 1;
     moveDownBtn.onclick = (e) => { e.stopPropagation(); movePlayer(index, 1); };
-    
+
     orderControls.appendChild(moveUpBtn);
     orderControls.appendChild(moveDownBtn);
     card.appendChild(orderControls);
 
+    const header = document.createElement("div");
+    header.className = "player-header";
+
+    const avatar = document.createElement("div");
+    avatar.className = "player-avatar";
+    // Self-signed-up players may carry a photo; else the two-letter emblem.
+    if (p.avatar) {
+      avatar.style.backgroundImage = `url(${p.avatar})`;
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+    } else {
+      avatar.textContent = initials(p.name);
+      avatar.style.background = avatarColor(p.name);
+    }
+
+    const nameWrap = document.createElement("div");
     const nameDiv = document.createElement("div");
     nameDiv.className = "player-name";
     nameDiv.textContent = p.name;
+    nameWrap.appendChild(nameDiv);
+    if (p.pronouns) {
+      const pron = document.createElement("div");
+      pron.className = "player-pronouns";
+      pron.textContent = p.pronouns;
+      nameWrap.appendChild(pron);
+    }
+
+    header.appendChild(avatar);
+    header.appendChild(nameWrap);
 
     const statusDiv = document.createElement("div");
     statusDiv.className = "player-status";
-    
+
     const aliveBadge = document.createElement("div");
-    aliveBadge.className = `status-badge ${p.alive ? 'alive' : 'dead'}`;
-    aliveBadge.innerHTML = p.alive ? '🕯️ Alive' : '💀 Dead';
+    if (p.alive) {
+      aliveBadge.className = "status-badge alive";
+      aliveBadge.innerHTML = '🕯️ Alive';
+    } else if (p.deathCause === 'executed') {
+      aliveBadge.className = "status-badge executed";
+      aliveBadge.innerHTML = '⚖️ Executed';
+    } else if (p.deathCause === 'killed') {
+      aliveBadge.className = "status-badge killed";
+      aliveBadge.innerHTML = '🔪 Killed';
+    } else {
+      aliveBadge.className = "status-badge dead";
+      aliveBadge.innerHTML = '💀 Dead';
+    }
     statusDiv.appendChild(aliveBadge);
-    
+
     if (p.traveler) {
       const travelerBadge = document.createElement("div");
       travelerBadge.className = "status-badge traveler";
       travelerBadge.innerHTML = '🎒 Traveler';
       statusDiv.appendChild(travelerBadge);
     }
-    
+
     if (p.ghostVote && !p.alive) {
       const ghostBadge = document.createElement("div");
       ghostBadge.className = "status-badge ghost";
@@ -701,48 +1183,220 @@ function renderPlayers() {
       statusDiv.appendChild(ghostBadge);
     }
 
+    if (p.hasNominated) {
+      const nomBadge = document.createElement("div");
+      nomBadge.className = "status-badge nominator";
+      nomBadge.innerHTML = '🕐 Nominator';
+      statusDiv.appendChild(nomBadge);
+    }
+
+    if (p.hasBeenNominated) {
+      const nomBadge = document.createElement("div");
+      nomBadge.className = "status-badge nominee";
+      nomBadge.innerHTML = '☠️ Nominee';
+      statusDiv.appendChild(nomBadge);
+    }
+
+    card.appendChild(header);
+    card.appendChild(statusDiv);
+
+    // Buttons only shown when player selected
+    if (!isSelected) {
+      const hint = document.createElement("div");
+      hint.className = "select-hint";
+      hint.textContent = "Click to manage";
+      card.appendChild(hint);
+      playersContainer.appendChild(card);
+      return;
+    }
+
     const actionsDiv = document.createElement("div");
     actionsDiv.className = "player-actions";
 
-    const aliveBtn = document.createElement("button");
-    aliveBtn.className = "btn";
-    aliveBtn.textContent = p.alive ? "Kill" : "Revive";
-    aliveBtn.onclick = (e) => { e.stopPropagation(); killOrRevive(index); };
-    actionsDiv.appendChild(aliveBtn);
+    const isDay = phaseSelect.value === 'Day';
+    const mkRow = () => { const r = document.createElement("div"); r.className = "action-row"; return r; };
+
+    // Row 1: Execute & Kill (alive) / Revive (dead)
+    const row1 = mkRow();
+    if (p.alive) {
+      // Two distinct death causes
+      const executeBtn = document.createElement("button");
+      executeBtn.className = "btn execute";
+      executeBtn.textContent = "Execute";
+      executeBtn.onclick = (e) => { e.stopPropagation(); killPlayer(index, 'executed'); };
+      row1.appendChild(executeBtn);
+
+      const killBtn = document.createElement("button");
+      killBtn.className = "btn kill";
+      killBtn.textContent = "Kill";
+      killBtn.onclick = (e) => { e.stopPropagation(); killPlayer(index, 'killed'); };
+      row1.appendChild(killBtn);
+    } else {
+      const reviveBtn = document.createElement("button");
+      reviveBtn.className = "btn";
+      reviveBtn.textContent = "Revive";
+      reviveBtn.onclick = (e) => { e.stopPropagation(); revivePlayer(index); };
+      row1.appendChild(reviveBtn);
+    }
+    actionsDiv.appendChild(row1);
+
+    // Row 2: Nominate & Put on Block — only apply during the day
+    if (isDay) {
+      const row2 = mkRow();
+      const nominateBtn = document.createElement("button");
+      nominateBtn.className = "btn";
+      nominateBtn.textContent = (state.nominatedPlayer === index) ? "Un-Nom" : "Nom";
+      nominateBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (state.nominatedPlayer === index) {
+          clearNomination();
+        } else {
+          const opening = nominatingPlayer !== index;
+          nominatingPlayer = opening ? index : null;
+          renderPlayers();
+          // Open the dropdown synchronously, still inside this click's user
+          // gesture (mobile blocks showPicker/focus from async callbacks).
+          if (opening) {
+            const sel = document.getElementById("nominatorSelect");
+            if (sel) {
+              sel.focus();
+              if (sel.showPicker) { try { sel.showPicker(); } catch (err) {} }
+            }
+          }
+        }
+      };
+      row2.appendChild(nominateBtn);
+
+      const onBlockBtn = document.createElement("button");
+      onBlockBtn.className = "btn";
+      onBlockBtn.textContent = (state.onBlockPlayer === index) ? "Un-Block" : "Block";
+      onBlockBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (state.onBlockPlayer === index) {
+          toggleOnBlock(index); // removing — no picker needed
+        } else {
+          blockingPlayer = (blockingPlayer === index) ? null : index;
+          nominatingPlayer = null;
+          renderPlayers();
+        }
+      };
+      row2.appendChild(onBlockBtn);
+      actionsDiv.appendChild(row2);
+    }
+
+    // Row 3: Remove Ghost (dead only) & Set Traveler
+    const row3 = mkRow();
+    if (!p.alive) {
+      const ghostBtn = document.createElement("button");
+      ghostBtn.className = "btn";
+      ghostBtn.textContent = p.ghostVote ? "Remove Ghost" : "Add Ghost";
+      ghostBtn.onclick = (e) => { e.stopPropagation(); p.ghostVote = !p.ghostVote; sendUpdate(); };
+      row3.appendChild(ghostBtn);
+    }
 
     const travelerBtn = document.createElement("button");
     travelerBtn.className = "btn";
     travelerBtn.textContent = p.traveler ? "Unset Traveler" : "Set Traveler";
     travelerBtn.onclick = (e) => { e.stopPropagation(); p.traveler = !p.traveler; sendUpdate(); };
-    actionsDiv.appendChild(travelerBtn);
+    row3.appendChild(travelerBtn);
+    actionsDiv.appendChild(row3);
 
-    const ghostBtn = document.createElement("button");
-    ghostBtn.className = "btn";
-    ghostBtn.textContent = p.ghostVote ? "Remove Ghost" : "Add Ghost";
-    ghostBtn.onclick = (e) => { e.stopPropagation(); p.ghostVote = !p.ghostVote; sendUpdate(); };
-    actionsDiv.appendChild(ghostBtn);
-
-    const onBlockBtn = document.createElement("button");
-    onBlockBtn.className = "btn";
-    onBlockBtn.textContent = (state.onBlockPlayer === index) ? "Remove from Block" : "Put on Block";
-    onBlockBtn.onclick = (e) => { e.stopPropagation(); toggleOnBlock(index); };
-    actionsDiv.appendChild(onBlockBtn);
-
-    const nominateBtn = document.createElement("button");
-    nominateBtn.className = "btn";
-    nominateBtn.textContent = (state.nominatedPlayer === index) ? "Un-nominate" : "Nominate";
-    nominateBtn.onclick = (e) => { e.stopPropagation(); toggleNominated(index); };
-    actionsDiv.appendChild(nominateBtn);
-
+    // Row 4: Remove Player
+    const row4 = mkRow();
     const removeBtn = document.createElement("button");
     removeBtn.className = "btn danger";
-    removeBtn.textContent = "Remove";
+    removeBtn.textContent = "Remove Player";
     removeBtn.onclick = (e) => { e.stopPropagation(); removePlayer(index); };
-    actionsDiv.appendChild(removeBtn);
+    row4.appendChild(removeBtn);
+    actionsDiv.appendChild(row4);
 
-    card.appendChild(nameDiv);
-    card.appendChild(statusDiv);
     card.appendChild(actionsDiv);
+
+    // Nominate panel: pick the nominator (incl. self)
+    if (nominatingPlayer === index) {
+      const panel = document.createElement("div");
+      panel.className = "nominate-panel";
+
+      const label = document.createElement("label");
+      label.textContent = `Who nominates ${p.name}?`;
+      panel.appendChild(label);
+
+      const select = document.createElement("select");
+      select.id = "nominatorSelect";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Select nominator...";
+      select.appendChild(placeholder);
+      state.players.forEach((np, ni) => {
+        // A player can only nominate once per day
+        if (np.hasNominated && ni !== state.nominatorPlayer) return;
+        const opt = document.createElement("option");
+        opt.value = ni;
+        opt.textContent = ni === index ? `${np.name} (self)` : np.name;
+        select.appendChild(opt);
+      });
+      panel.appendChild(select);
+
+      const buttons = document.createElement("div");
+      buttons.className = "nominate-panel-buttons";
+
+      const confirmBtn = document.createElement("button");
+      confirmBtn.className = "btn btn-primary";
+      confirmBtn.textContent = "Confirm";
+      confirmBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (select.value === "") return;
+        setNomination(parseInt(select.value), index);
+      };
+      buttons.appendChild(confirmBtn);
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "btn";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.onclick = (e) => { e.stopPropagation(); nominatingPlayer = null; renderPlayers(); };
+      buttons.appendChild(cancelBtn);
+
+      panel.appendChild(buttons);
+      card.appendChild(panel);
+    }
+
+    // Put-on-block vote picker: choose vote count before confirming
+    if (blockingPlayer === index) {
+      const panel = document.createElement("div");
+      panel.className = "nominate-panel";
+
+      const label = document.createElement("label");
+      label.textContent = `Votes to put ${p.name} on the block:`;
+      panel.appendChild(label);
+
+      // Stepper: defaults to the min needed, range [0, total players].
+      const min = 0;
+      const max = state.players.length;
+      let votes = Math.min(minVotesNeeded(), max);
+      const stepper = buildVoteStepper(votes, min, max, (v) => { votes = v; });
+      panel.appendChild(stepper);
+
+      const buttons = document.createElement("div");
+      buttons.className = "nominate-panel-buttons";
+
+      const confirmBtn = document.createElement("button");
+      confirmBtn.className = "btn btn-primary";
+      confirmBtn.textContent = "Confirm";
+      confirmBtn.onclick = (e) => {
+        e.stopPropagation();
+        setOnBlock(index, votes);
+      };
+      buttons.appendChild(confirmBtn);
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "btn";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.onclick = (e) => { e.stopPropagation(); blockingPlayer = null; renderPlayers(); };
+      buttons.appendChild(cancelBtn);
+
+      panel.appendChild(buttons);
+      card.appendChild(panel);
+    }
 
     // Add on-block controls if this player is on the block
     if (state.onBlockPlayer === index) {
@@ -756,19 +1410,16 @@ function renderPlayers() {
       
       const votesGroup = document.createElement("div");
       votesGroup.className = "votes-input-group";
-      
+
       const votesLabel = document.createElement("label");
       votesLabel.textContent = "Votes:";
       votesGroup.appendChild(votesLabel);
-      
-      const votesInput = document.createElement("input");
-      votesInput.type = "number";
-      votesInput.className = "votes-input";
-      votesInput.min = "0";
-      votesInput.value = state.onBlockVotes || 0;
-      votesInput.onchange = (e) => { updateOnBlockVotes(parseInt(e.target.value) || 0); };
-      votesGroup.appendChild(votesInput);
-      
+
+      // Live edit of the on-block count, range [0, total players].
+      const stepper = buildVoteStepper(state.onBlockVotes || 0, 0, state.players.length,
+        (v) => updateOnBlockVotes(v));
+      votesGroup.appendChild(stepper);
+
       onBlockControls.appendChild(votesGroup);
       card.appendChild(onBlockControls);
     }
@@ -784,7 +1435,22 @@ function toggleOnBlock(index) {
   } else {
     state.onBlockPlayer = index;
     state.onBlockVotes = 0;
+    // Putting someone on the block ends the active nomination, but the
+    // nominator/nominee badges persist for the rest of the day.
+    state.nominatorPlayer = null;
+    state.nominatedPlayer = null;
   }
+  sendUpdate();
+}
+
+// Confirm putting a player on the block with a chosen vote count
+function setOnBlock(index, votes) {
+  state.onBlockPlayer = index;
+  state.onBlockVotes = votes;
+  blockingPlayer = null;
+  // Putting someone on the block ends the active nomination; sticky badges stay.
+  state.nominatorPlayer = null;
+  state.nominatedPlayer = null;
   sendUpdate();
 }
 
@@ -793,34 +1459,90 @@ function updateOnBlockVotes(votes) {
   sendUpdate();
 }
 
-function toggleNominated(index) {
-  if (state.nominatedPlayer === index) {
+// Set a nomination: nominator -> nominee. The active highlight moves to this pair,
+// but per-player nominator/nominee badges accumulate and persist until the next day.
+function setNomination(nominatorIndex, nomineeIndex) {
+  state.nominatorPlayer = nominatorIndex;
+  state.nominatedPlayer = nomineeIndex;
+  state.players[nominatorIndex].hasNominated = true;
+  state.players[nomineeIndex].hasBeenNominated = true;
+  nominatingPlayer = null;
+  sendUpdate();
+}
+
+// Clear the current active nomination (the highlighted pair). Also clears that pair's
+// sticky badges — this is the explicit "Un-nominate" undo.
+function clearNomination(send = true) {
+  if (state.nominatorPlayer !== null && state.players[state.nominatorPlayer]) {
+    state.players[state.nominatorPlayer].hasNominated = false;
+  }
+  if (state.nominatedPlayer !== null && state.players[state.nominatedPlayer]) {
+    state.players[state.nominatedPlayer].hasBeenNominated = false;
+  }
+  state.nominatorPlayer = null;
+  state.nominatedPlayer = null;
+  if (send) sendUpdate();
+}
+
+function killPlayer(index, cause) {
+  const player = state.players[index];
+  player.alive = false;
+  player.deathCause = cause; // 'executed' or 'killed'
+  // Executing the player on the block clears the block.
+  if (state.onBlockPlayer === index) {
+    state.onBlockPlayer = null;
+    state.onBlockVotes = 0;
+  }
+  // An execution ends the day's nomination phase: clear the active pair and
+  // wipe every player's sticky nominator/nominee badges.
+  if (cause === 'executed') {
+    state.nominatorPlayer = null;
     state.nominatedPlayer = null;
-  } else {
-    state.nominatedPlayer = index;
+    state.players.forEach(pl => { pl.hasNominated = false; pl.hasBeenNominated = false; });
   }
   sendUpdate();
 }
 
-function killOrRevive(index) {
+function revivePlayer(index) {
   const player = state.players[index];
-  player.alive = !player.alive;
+  player.alive = true;
+  player.deathCause = null;
   sendUpdate();
 }
 
 function movePlayer(index, direction) {
   const newIndex = index + direction;
-  
+
   // Check bounds
   if (newIndex < 0 || newIndex >= state.players.length) {
     return;
   }
-  
-  // Swap players
-  const temp = state.players[index];
-  state.players[index] = state.players[newIndex];
-  state.players[newIndex] = temp;
-  
+
+  reorderPlayer(index, newIndex);
+}
+
+// Move player from `from` index to `to` index, shifting tracked indices to follow.
+function reorderPlayer(from, to) {
+  if (from === null || to === null || from === to) return;
+  if (from < 0 || to < 0 || from >= state.players.length || to >= state.players.length) return;
+
+  const remap = (i) => {
+    if (i === null) return null;
+    if (i === from) return to;
+    // Index shifts when an element is pulled out and reinserted
+    if (from < to) return (i > from && i <= to) ? i - 1 : i;
+    return (i >= to && i < from) ? i + 1 : i;
+  };
+
+  const [moved] = state.players.splice(from, 1);
+  state.players.splice(to, 0, moved);
+
+  state.onBlockPlayer = remap(state.onBlockPlayer);
+  state.nominatedPlayer = remap(state.nominatedPlayer);
+  state.nominatorPlayer = remap(state.nominatorPlayer);
+  if (selectedPlayer !== null) selectedPlayer = remap(selectedPlayer);
+  if (nominatingPlayer !== null) nominatingPlayer = remap(nominatingPlayer);
+
   sendUpdate();
 }
 
@@ -829,23 +1551,33 @@ function removePlayer(index) {
     return;
   }
   
-  // Adjust on-block and nominated indices if necessary
+  // Adjust tracked indices if necessary
   if (state.onBlockPlayer === index) {
     state.onBlockPlayer = null;
     state.onBlockVotes = 0;
   } else if (state.onBlockPlayer !== null && state.onBlockPlayer > index) {
     state.onBlockPlayer--;
   }
-  
+
   if (state.nominatedPlayer === index) {
     state.nominatedPlayer = null;
   } else if (state.nominatedPlayer !== null && state.nominatedPlayer > index) {
     state.nominatedPlayer--;
   }
-  
+
+  if (state.nominatorPlayer === index) {
+    state.nominatorPlayer = null;
+  } else if (state.nominatorPlayer !== null && state.nominatorPlayer > index) {
+    state.nominatorPlayer--;
+  }
+
+  // Clear selection/nominate UI tied to this card
+  selectedPlayer = null;
+  nominatingPlayer = null;
+
   // Remove player from array
   state.players.splice(index, 1);
-  
+
   sendUpdate();
 }
 
@@ -857,9 +1589,7 @@ function nextPhase() {
     phaseSelect.value = 'Night';
     phaseNumber.value = String(Number(phaseNumber.value) + 1);
     // Clear nominated and on-block when transitioning to Night
-    state.onBlockPlayer = null;
-    state.onBlockVotes = 0;
-    state.nominatedPlayer = null;
+    clearDayState();
   }
   sendUpdate();
 }
@@ -868,9 +1598,7 @@ function nextPhase() {
 phaseSelect.onchange = () => {
   // Clear nominated and on-block when transitioning to Night
   if (phaseSelect.value === 'Night' && previousPhase === 'Day') {
-    state.onBlockPlayer = null;
-    state.onBlockVotes = 0;
-    state.nominatedPlayer = null;
+    clearDayState();
   }
   previousPhase = phaseSelect.value;
   sendUpdate();
@@ -891,7 +1619,7 @@ function bulkImportPlayers() {
   names.forEach(name => {
     // Check if player already exists
     if (!state.players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
-      state.players.push({ name, alive: true, traveler: false, ghostVote: true });
+      state.players.push({ id: newPlayerId(), name, alive: true, traveler: false, ghostVote: true });
     }
   });
   
@@ -906,7 +1634,7 @@ function clearBulkInput() {
 addPlayerBtn.onclick = () => {
   const name = newPlayerName.value.trim();
   if (name) {
-    state.players.push({ name, alive: true, traveler: false, ghostVote: true });
+    state.players.push({ id: newPlayerId(), name, alive: true, traveler: false, ghostVote: true });
     sendUpdate();
     newPlayerName.value = "";
   }
@@ -919,6 +1647,23 @@ nextPhaseBtn.onclick = nextPhase;
 
 phaseSelect.addEventListener("change", sendUpdate);
 phaseNumber.addEventListener("input", sendUpdate);
+
+document.getElementById("audioChangeBtn").onclick = () => sendAudioCommand('change');
+document.getElementById("audioRestartBtn").onclick = () => sendAudioCommand('restart');
+document.getElementById("audioFadeBtn").onclick = () => sendAudioCommand('fade');
+document.getElementById("audioStopBtn").onclick = () => sendAudioCommand('stop');
+
+document.getElementById("goodWinsBtn").onclick = () => declareWinner('good');
+document.getElementById("evilWinsBtn").onclick = () => declareWinner('evil');
+
+// Start a new game: server clears the roster + mints a new gameId, which frees
+// every phone to re-join the lobby.
+document.getElementById("newGameBtn").onclick = () => {
+  if (!confirm('Start a new game? This clears all players and lets everyone re-join the lobby.')) return;
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ newGame: true }));
+  }
+};
 
 renderPlayers();
 </script>

@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Join the Game — Blood on the Clocktower</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Crimson Text', serif;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a0f0f 50%, #0f0a1a 100%);
+    color: #f0e6d2;
+    min-height: 100vh;
+    padding: 24px 18px 60px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(circle at 20% 80%, rgba(139, 69, 19, 0.12) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(25, 25, 112, 0.12) 0%, transparent 50%);
+    pointer-events: none; z-index: -1;
+  }
+
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 28px; }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 2.1em;
+    font-weight: 600;
+    background: linear-gradient(135deg, #d4af37, #8b4513);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+    letter-spacing: 2px;
+    line-height: 1.15;
+  }
+
+  .subtitle { font-size: 1.05em; color: #a08060; font-style: italic; margin-top: 6px; }
+
+  .card {
+    background: rgba(20, 20, 30, 0.85);
+    border: 2px solid rgba(139, 69, 19, 0.35);
+    border-radius: 18px;
+    padding: 26px 22px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 0.95em;
+    color: #d4af37;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .field { margin-bottom: 22px; }
+  .optional { color: #7a6448; font-size: 0.8em; letter-spacing: 0.5px; }
+
+  input[type="text"] {
+    width: 100%;
+    background: rgba(40, 40, 50, 0.85);
+    border: 2px solid rgba(139, 69, 19, 0.45);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: #f0e6d2;
+    font-family: 'Crimson Text', serif;
+    font-size: 1.15em;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+
+  input[type="text"]:focus {
+    outline: none;
+    border-color: #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);
+  }
+
+  input::placeholder { color: #8a7152; font-style: italic; }
+
+  /* Avatar picker */
+  .avatar-field { display: flex; align-items: center; gap: 18px; }
+
+  .avatar-preview {
+    width: 84px; height: 84px;
+    flex: 0 0 84px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel', serif; font-weight: 600; font-size: 1.6em;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    border: 2px solid rgba(255,255,255,0.25);
+    box-shadow: inset 0 1px 4px rgba(255,255,255,0.2), 0 2px 8px rgba(0,0,0,0.45);
+    background-size: cover; background-position: center;
+    overflow: hidden;
+  }
+  .avatar-preview.clickable { cursor: pointer; }
+  .avatar-preview.clickable:hover { box-shadow: inset 0 1px 4px rgba(255,255,255,0.2), 0 0 0 3px rgba(212,175,55,0.6); }
+
+  .avatar-buttons { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  #photoInput { display: none; }
+
+  /* Crop modal */
+  .cropper-overlay {
+    position: fixed; inset: 0;
+    background: rgba(5, 4, 8, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .cropper-overlay.show { display: flex; }
+
+  .cropper-modal {
+    width: 100%; max-width: 380px;
+    background: rgba(20, 20, 30, 0.95);
+    border: 2px solid rgba(212, 175, 55, 0.45);
+    border-radius: 18px;
+    padding: 22px 20px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    text-align: center;
+  }
+  .cropper-title {
+    font-family: 'Cinzel', serif; font-weight: 600;
+    font-size: 1.3em; color: #d4af37; letter-spacing: 1px;
+  }
+  .cropper-hint { color: #a08060; font-style: italic; font-size: 0.9em; margin: 6px 0 16px; }
+
+  /* Square stage; circular cutout shows the final emblem framing exactly. */
+  .cropper-stage {
+    position: relative;
+    width: 280px; height: 280px;
+    max-width: 78vw; max-height: 78vw;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+  }
+  .cropper-stage:active { cursor: grabbing; }
+  #cropperImg {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+  /* Dim everything outside the circular crop area. */
+  .cropper-ring {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 2000px rgba(10, 8, 14, 0.55);
+    -webkit-mask: radial-gradient(circle at center, transparent 0 49.5%, #000 50%);
+    mask: radial-gradient(circle at center, transparent 0 49.5%, #000 50%);
+  }
+  .cropper-ring::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100%; height: 100%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 2px dashed rgba(212, 175, 55, 0.8);
+    box-sizing: border-box;
+  }
+
+  .cropper-zoom {
+    display: flex; align-items: center; gap: 12px;
+    margin: 18px 4px 4px;
+    color: #d4af37; font-size: 1.3em;
+  }
+  .cropper-zoom input[type="range"] { flex: 1; accent-color: #d4af37; height: 28px; }
+
+  .cropper-buttons { display: flex; gap: 12px; margin-top: 16px; }
+  .cropper-buttons .btn { flex: 1; margin: 0; }
+
+  .btn {
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.85), rgba(25, 25, 112, 0.85));
+    border: 2px solid rgba(212, 175, 55, 0.35);
+    border-radius: 10px;
+    padding: 12px 18px;
+    color: #f0e6d2;
+    font-family: 'Crimson Text', serif;
+    font-size: 1em; font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.25s, border-color 0.25s;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.ghost { background: rgba(40,40,50,0.7); }
+
+  .btn-join {
+    width: 100%;
+    margin-top: 4px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.9), rgba(139, 69, 19, 0.9));
+    border-color: rgba(212, 175, 55, 0.5);
+    padding: 16px;
+    font-size: 1.2em;
+    color: #1a0f0f;
+    font-weight: 700;
+  }
+  .btn-join:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .status-line {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 0.95em;
+    min-height: 1.3em;
+    transition: color 0.3s;
+  }
+  .status-line.ok { color: #90ee90; }
+  .status-line.err { color: #ff6b6b; }
+
+  /* Joined confirmation */
+  .joined-banner {
+    display: none;
+    text-align: center;
+    padding: 30px 10px 10px;
+  }
+  .joined-banner .check {
+    font-size: 3.2em;
+    display: block;
+    margin-bottom: 10px;
+  }
+  .joined-banner h2 {
+    font-family: 'Cinzel', serif;
+    color: #d4af37;
+    font-size: 1.6em;
+    margin-bottom: 8px;
+  }
+  .joined-banner p { color: #a08060; font-style: italic; }
+
+  .conn {
+    position: fixed; top: 12px; right: 12px;
+    font-size: 0.78em; padding: 6px 11px; border-radius: 8px;
+    border: 1px solid rgba(139,69,19,0.5);
+    background: rgba(20,20,30,0.85);
+  }
+  .conn.connected { color: #90ee90; border-color: rgba(34,139,34,0.6); }
+  .conn.disconnected { color: #ff6b6b; border-color: rgba(220,20,60,0.6); }
+</style>
+</head>
+<body>
+<div class="conn" id="conn">Connecting…</div>
+
+<div class="wrap">
+  <header>
+    <h1>Take Your Seat</h1>
+    <p class="subtitle">Blood on the Clocktower</p>
+  </header>
+
+  <div class="card" id="formCard">
+    <div class="field">
+      <label for="nameInput">Your Name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Josh" autocomplete="name" minlength="2" maxlength="20">
+    </div>
+
+    <div class="field">
+      <label>Profile Picture <span class="optional">(optional)</span></label>
+      <div class="avatar-field">
+        <div class="avatar-preview" id="avatarPreview">??</div>
+        <div class="avatar-buttons">
+          <button class="btn" id="photoBtn" type="button">📷 Add Photo</button>
+          <button class="btn ghost" id="photoClearBtn" type="button" style="display:none;">Remove</button>
+        </div>
+      </div>
+      <input type="file" id="photoInput" accept="image/*">
+    </div>
+
+    <div class="field">
+      <label for="pronounsInput">Pronouns <span class="optional">(optional)</span></label>
+      <input type="text" id="pronounsInput" placeholder="e.g. she/her, they/them" maxlength="24">
+    </div>
+
+    <button class="btn btn-join" id="joinBtn" disabled>Join Game</button>
+    <div class="status-line" id="statusLine"></div>
+  </div>
+
+  <div class="cropper-overlay" id="cropperOverlay">
+    <div class="cropper-modal">
+      <div class="cropper-title">Frame Your Photo</div>
+      <p class="cropper-hint">Drag to reposition · pinch or slide to zoom</p>
+      <div class="cropper-stage" id="cropperStage">
+        <img id="cropperImg" alt="" draggable="false">
+        <div class="cropper-ring"></div>
+      </div>
+      <div class="cropper-zoom">
+        <span>−</span>
+        <input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1">
+        <span>+</span>
+      </div>
+      <div class="cropper-buttons">
+        <button class="btn ghost" id="cropCancelBtn" type="button">Cancel</button>
+        <button class="btn btn-join" id="cropUseBtn" type="button">Use Photo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="joined-banner card" id="joinedBanner">
+    <span class="check">🕯️</span>
+    <h2 id="joinedName">You're in!</h2>
+    <p>You've taken your seat. Watch the town square — the storyteller will begin soon.</p>
+    <button class="btn ghost" id="editBtn" type="button" style="margin-top:18px;">Edit my details</button>
+  </div>
+</div>
+
+<script>
+const nameInput = document.getElementById('nameInput');
+const pronounsInput = document.getElementById('pronounsInput');
+const avatarPreview = document.getElementById('avatarPreview');
+const photoInput = document.getElementById('photoInput');
+const photoBtn = document.getElementById('photoBtn');
+const photoClearBtn = document.getElementById('photoClearBtn');
+const joinBtn = document.getElementById('joinBtn');
+const statusLine = document.getElementById('statusLine');
+const formCard = document.getElementById('formCard');
+const joinedBanner = document.getElementById('joinedBanner');
+const joinedName = document.getElementById('joinedName');
+const editBtn = document.getElementById('editBtn');
+const connEl = document.getElementById('conn');
+
+let avatarData = null;   // resized data URL, or null
+let cropSource = null;   // full-res source image (so the cropper can re-open)
+let players = [];        // latest known roster (to detect name clashes)
+let myName = null;       // the name we successfully joined as
+let myId = null;         // this device's stable player id for the current game
+let currentGameId = null;// server's current game session id
+
+// Mint a stable, unique player id. Identity is the id (not the name), so a
+// player can rename themselves and still update their own seat.
+function newPlayerId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+// Replace with your server IP
+const ws = new WebSocket('ws://YOUR_IP:8080');
+
+ws.onopen = () => { connEl.textContent = 'Connected'; connEl.className = 'conn connected'; };
+ws.onclose = () => { connEl.textContent = 'Disconnected'; connEl.className = 'conn disconnected'; };
+ws.onerror = () => { connEl.textContent = 'Disconnected'; connEl.className = 'conn disconnected'; };
+
+ws.onmessage = (msg) => {
+  try {
+    const data = JSON.parse(msg.data);
+    if (Array.isArray(data.players)) players = data.players;
+    if (data.gameId !== undefined) handleGameId(data.gameId);
+  } catch (e) {}
+  refreshJoinState();
+};
+
+// Mirror the display's deterministic avatar color + initials so the preview
+// (and the eventual emblem) match when no photo is chosen.
+function avatarColor(name) {
+  let h1 = 0, h2 = 0;
+  for (let i = 0; i < name.length; i++) {
+    h1 = (h1 * 31 + name.charCodeAt(i)) >>> 0;
+    h2 = (h2 * 131 + name.charCodeAt(i) * 7 + 17) >>> 0;
+  }
+  const hue = (h1 * 137.508) % 360;
+  const sat = 48 + (h2 % 28);
+  const light = 38 + ((h1 >>> 3) % 16);
+  return `hsl(${hue.toFixed(1)}, ${sat}%, ${light}%)`;
+}
+function initials(name) {
+  const parts = name.trim().split(/\s+/);
+  if (!parts[0]) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function updatePreview() {
+  const name = nameInput.value.trim();
+  if (avatarData) {
+    // The cropped data URL is already a square emblem — fill the circle exactly
+    // (cover + center) so the preview matches what the display will show.
+    avatarPreview.style.backgroundColor = 'transparent';
+    avatarPreview.style.backgroundImage = `url(${avatarData})`;
+    avatarPreview.style.backgroundSize = 'cover';
+    avatarPreview.style.backgroundPosition = 'center';
+    avatarPreview.textContent = '';
+  } else {
+    avatarPreview.style.backgroundImage = 'none';
+    avatarPreview.style.backgroundColor = name ? avatarColor(name) : 'rgba(60,60,70,0.8)';
+    avatarPreview.textContent = name ? initials(name) : '??';
+  }
+}
+
+function refreshJoinState() {
+  const name = nameInput.value.trim();
+  joinBtn.disabled = name.length < 2 || name.length > 20 || ws.readyState !== WebSocket.OPEN;
+}
+
+// This device's seat for a game session, stored as { gameId, id, name }. The id
+// is the stable identity; the name is editable. A new game (new gameId) frees the
+// device to join afresh.
+const DEVICE_KEY = 'botcLobbyJoined';
+function readDeviceJoin() {
+  try { return JSON.parse(localStorage.getItem(DEVICE_KEY) || 'null'); } catch (e) { return null; }
+}
+// The seat locked to THIS game, or null if we haven't joined the current game.
+function deviceJoin() {
+  const rec = readDeviceJoin();
+  if (!rec || !rec.id) return null;
+  if (currentGameId !== null && rec.gameId !== currentGameId) return null;
+  return rec;
+}
+function setDeviceJoin(id, name) {
+  try {
+    if (id) localStorage.setItem(DEVICE_KEY, JSON.stringify({ gameId: currentGameId, id, name }));
+    else localStorage.removeItem(DEVICE_KEY);
+  } catch (e) {}
+}
+
+// React to the server's game session id. A changed id means the storyteller
+// started a new game: drop our stale lock and reset to a fresh join form.
+function handleGameId(id) {
+  const prev = currentGameId;
+  currentGameId = id;
+  if (prev !== null && prev === id) return;
+
+  if (prev !== null && prev !== id) {
+    // New game started — reset to a clean join form.
+    myName = null;
+    myId = null;
+    avatarData = null;
+    cropSource = null;
+    photoInput.value = '';
+    photoClearBtn.style.display = 'none';
+    photoBtn.textContent = '📷 Add Photo';
+    nameInput.value = '';
+    pronounsInput.value = '';
+    statusLine.textContent = '';
+    statusLine.className = 'status-line';
+    joinedBanner.style.display = 'none';
+    formCard.style.display = '';
+    updatePreview();
+    refreshJoinState();
+    return;
+  }
+
+  // First time we learn the game id (page load / reconnect): if this device is
+  // already locked to THIS game, jump straight to the confirmation banner.
+  const prior = deviceJoin();
+  if (prior) {
+    myId = prior.id;
+    myName = prior.name;
+    nameInput.value = prior.name;
+    joinedName.textContent = `You're in, ${prior.name}!`;
+    formCard.style.display = 'none';
+    joinedBanner.style.display = 'block';
+  }
+  refreshJoinState();
+}
+
+nameInput.addEventListener('input', () => { updatePreview(); refreshJoinState(); statusLine.textContent = ''; statusLine.className = 'status-line'; });
+
+photoBtn.onclick = () => photoInput.click();
+photoClearBtn.onclick = () => {
+  avatarData = null;
+  cropSource = null;
+  photoInput.value = '';
+  photoClearBtn.style.display = 'none';
+  photoBtn.textContent = '📷 Add Photo';
+  avatarPreview.classList.remove('clickable');
+  updatePreview();
+};
+
+// Tapping the preview re-opens the cropper so the player can re-frame/zoom the
+// same photo without re-picking it.
+avatarPreview.onclick = () => { if (cropSource) openCropper(cropSource); };
+
+// Picking a file opens the interactive cropper; the actual emblem is produced
+// only when the player confirms their framing.
+photoInput.onchange = () => {
+  const file = photoInput.files && photoInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => { cropSource = e.target.result; openCropper(cropSource); };
+  reader.readAsDataURL(file);
+};
+
+// --- Interactive circular cropper: drag to pan, slider/pinch to zoom ---
+const cropperOverlay = document.getElementById('cropperOverlay');
+const cropperStage = document.getElementById('cropperStage');
+const cropperImg = document.getElementById('cropperImg');
+const cropZoom = document.getElementById('cropZoom');
+const cropCancelBtn = document.getElementById('cropCancelBtn');
+const cropUseBtn = document.getElementById('cropUseBtn');
+
+const crop = {
+  natW: 0, natH: 0,    // natural image size
+  baseScale: 1,        // scale that makes the image "cover" the square stage
+  scale: 1,            // user zoom multiplier (>= 1)
+  x: 0, y: 0,          // top-left offset of the image within the stage (px)
+  stage: 0,            // stage side length (px)
+  dragging: false, lastX: 0, lastY: 0,
+  pinchDist: 0, pinchScale: 1
+};
+
+function openCropper(dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    crop.natW = img.naturalWidth;
+    crop.natH = img.naturalHeight;
+    cropperImg.src = dataUrl;
+    cropperOverlay.classList.add('show');
+    // Measure after layout so the stage has its real (responsive) size.
+    requestAnimationFrame(() => {
+      crop.stage = cropperStage.clientWidth;
+      // Cover: smallest scale so the image fully fills the square.
+      crop.baseScale = Math.max(crop.stage / crop.natW, crop.stage / crop.natH);
+      crop.scale = 1;
+      cropZoom.value = '1';
+      // Center the image.
+      crop.x = (crop.stage - crop.natW * crop.baseScale) / 2;
+      crop.y = (crop.stage - crop.natH * crop.baseScale) / 2;
+      applyCropTransform();
+    });
+  };
+  img.src = dataUrl;
+}
+
+// Effective rendered scale = cover-scale * user-zoom.
+function effScale() { return crop.baseScale * crop.scale; }
+
+// Keep the image covering the stage (no empty gaps) after any pan/zoom.
+function clampCrop() {
+  const w = crop.natW * effScale();
+  const h = crop.natH * effScale();
+  crop.x = Math.min(0, Math.max(crop.stage - w, crop.x));
+  crop.y = Math.min(0, Math.max(crop.stage - h, crop.y));
+}
+
+function applyCropTransform() {
+  clampCrop();
+  cropperImg.style.width = crop.natW + 'px';
+  cropperImg.style.height = crop.natH + 'px';
+  cropperImg.style.transform = `translate(${crop.x}px, ${crop.y}px) scale(${effScale()})`;
+}
+
+// Zoom around the stage center so framing stays intuitive.
+function setZoom(newScale) {
+  newScale = Math.min(4, Math.max(1, newScale));
+  const c = crop.stage / 2;
+  // Image-space point currently under the center, kept fixed across the zoom.
+  const ix = (c - crop.x) / effScale();
+  const iy = (c - crop.y) / effScale();
+  crop.scale = newScale;
+  crop.x = c - ix * effScale();
+  crop.y = c - iy * effScale();
+  applyCropTransform();
+}
+
+cropZoom.oninput = () => setZoom(parseFloat(cropZoom.value));
+
+// Pointer drag (mouse + single touch)
+function dragStart(x, y) { crop.dragging = true; crop.lastX = x; crop.lastY = y; }
+function dragMove(x, y) {
+  if (!crop.dragging) return;
+  crop.x += x - crop.lastX;
+  crop.y += y - crop.lastY;
+  crop.lastX = x; crop.lastY = y;
+  applyCropTransform();
+}
+function dragEnd() { crop.dragging = false; }
+
+cropperStage.addEventListener('mousedown', (e) => { e.preventDefault(); dragStart(e.clientX, e.clientY); });
+window.addEventListener('mousemove', (e) => dragMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', dragEnd);
+
+cropperStage.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    dragStart(e.touches[0].clientX, e.touches[0].clientY);
+  } else if (e.touches.length === 2) {
+    crop.dragging = false;
+    crop.pinchDist = touchDist(e.touches);
+    crop.pinchScale = crop.scale;
+  }
+}, { passive: true });
+
+cropperStage.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1) {
+    dragMove(e.touches[0].clientX, e.touches[0].clientY);
+  } else if (e.touches.length === 2 && crop.pinchDist) {
+    const ratio = touchDist(e.touches) / crop.pinchDist;
+    setZoom(crop.pinchScale * ratio);
+    cropZoom.value = String(crop.scale);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+cropperStage.addEventListener('touchend', () => { crop.dragging = false; crop.pinchDist = 0; });
+
+function touchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
+
+function closeCropper() {
+  cropperOverlay.classList.remove('show');
+  cropperImg.src = '';
+}
+
+cropCancelBtn.onclick = () => {
+  // Cancel without changing the existing avatar (if any). Reset the file input
+  // so picking the same file again re-fires onchange.
+  photoInput.value = '';
+  closeCropper();
+};
+
+// Render the chosen circular framing to a small square data URL. We draw the
+// stage's square crop (the circle is centered in it; display uses cover so the
+// corners are hidden anyway) scaled to a token-sized emblem.
+cropUseBtn.onclick = () => {
+  const SIZE = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  const s = effScale();
+  // Map the stage square back into source-image pixels.
+  const sx = -crop.x / s;
+  const sy = -crop.y / s;
+  const sSide = crop.stage / s;
+  ctx.drawImage(cropperImg, sx, sy, sSide, sSide, 0, 0, SIZE, SIZE);
+  avatarData = canvas.toDataURL('image/jpeg', 0.85);
+  photoClearBtn.style.display = '';
+  photoBtn.textContent = '📷 Change Photo';
+  avatarPreview.classList.add('clickable');
+  closeCropper();
+  updatePreview();
+};
+
+joinBtn.onclick = () => {
+  const name = nameInput.value.trim();
+  if (name.length < 2 || name.length > 20) {
+    statusLine.textContent = 'Name must be 2–20 characters.';
+    statusLine.className = 'status-line err';
+    return;
+  }
+  if (ws.readyState !== WebSocket.OPEN) {
+    statusLine.textContent = 'Not connected — check your Wi-Fi and try again.';
+    statusLine.className = 'status-line err';
+    return;
+  }
+
+  // Identity is this device's stable id, minted once. If we haven't joined yet,
+  // mint a fresh id; editing reuses it, so the player can freely rename.
+  const joined = deviceJoin();
+  if (!myId) myId = (joined && joined.id) || newPlayerId();
+
+  // First-time join: warn if the chosen name is already taken by someone else.
+  // (When editing, our own seat may already carry this name — that's fine.)
+  if (!joined) {
+    const clash = players.find(p => p.name.toLowerCase() === name.toLowerCase() && p.id !== myId);
+    if (clash && !confirm(`"${name}" is already seated. Use this name anyway?`)) {
+      return;
+    }
+  }
+
+  ws.send(JSON.stringify({
+    joinRequest: {
+      id: myId,
+      name,
+      avatar: avatarData,
+      pronouns: pronounsInput.value.trim()
+    }
+  }));
+
+  myName = name;
+  setDeviceJoin(myId, name);
+  joinedName.textContent = `You're in, ${name}!`;
+  formCard.style.display = 'none';
+  joinedBanner.style.display = 'block';
+};
+
+editBtn.onclick = () => {
+  joinedBanner.style.display = 'none';
+  formCard.style.display = '';
+  // Pre-fill the current name; it's fully editable (id keeps the seat stable).
+  nameInput.value = myName || (deviceJoin() && deviceJoin().name) || nameInput.value;
+  updatePreview();
+  refreshJoinState();
+};
+
+updatePreview();
+refreshJoinState();
+</script>
+</body>
+</html>
