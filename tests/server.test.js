@@ -1,14 +1,21 @@
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
+const http = require('node:http');
 const path = require('node:path');
 const { test } = require('node:test');
 
 const projectRoot = path.resolve(__dirname, '..');
 
-function startServer() {
+function startServer(extraEnv = {}) {
   const child = spawn(process.execPath, ['server.js'], {
     cwd: projectRoot,
-    env: { ...process.env, HOST: '127.0.0.1', PORT: '0', CONTROLLER_KEY: 'test-secret' },
+    env: {
+      ...process.env,
+      HOST: '127.0.0.1',
+      PORT: '0',
+      CONTROLLER_KEY: 'test-secret',
+      ...extraEnv,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -39,10 +46,28 @@ function postJson(url, data, headers = {}) {
 }
 
 test('serves the app and synchronizes state over HTTP', async t => {
-  const { child, ready } = startServer();
+  let keepAliveHits = 0;
+  const keepAliveTarget = http.createServer((req, res) => {
+    if (req.url === '/healthz') keepAliveHits += 1;
+    res.writeHead(200);
+    res.end('ok');
+  });
+  await new Promise(resolve => keepAliveTarget.listen(0, '127.0.0.1', resolve));
+  t.after(() => keepAliveTarget.close());
+  const keepAlivePort = keepAliveTarget.address().port;
+
+  const { child, ready } = startServer({
+    RENDER_EXTERNAL_URL: `http://127.0.0.1:${keepAlivePort}`,
+    KEEP_ALIVE_INTERVAL_MS: '25',
+  });
   t.after(() => child.kill('SIGTERM'));
   const port = await ready;
   const base = `http://127.0.0.1:${port}`;
+
+  for (let attempt = 0; attempt < 20 && keepAliveHits === 0; attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  assert.ok(keepAliveHits > 0, 'Render keep-alive should ping the external health URL');
 
   for (const route of ['/', '/display', '/controller', '/lobby', '/healthz']) {
     const response = await fetch(`${base}${route}`);

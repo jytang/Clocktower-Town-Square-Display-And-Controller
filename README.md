@@ -42,7 +42,7 @@ The public links will be:
 - `https://YOUR-SERVICE.onrender.com/controller`
 - `https://YOUR-SERVICE.onrender.com/lobby`
 
-Render's free service can spin down after an idle period. The first request after that can take about a minute. Game state is stored in memory, so a service restart or redeploy starts a fresh game.
+On Render, the server pings its own `/healthz` endpoint every 10 minutes to prevent the free instance's 15-minute idle shutdown. Render can still restart free instances for deployments or maintenance. Game state is stored in memory, so a restart or redeploy starts a fresh game.
 
 Only share the lobby and display links publicly. The controller page is protected by the generated storyteller key; keep that key private.
 

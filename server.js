@@ -10,6 +10,11 @@ const ASSETS_ROOT = path.join(ROOT, 'assets');
 const CONTROLLER_KEY = process.env.CONTROLLER_KEY || '';
 const MAX_JSON_BYTES = 5 * 1024 * 1024;
 const LONG_POLL_TIMEOUT_MS = 15_000;
+const configuredKeepAliveInterval = Number(process.env.KEEP_ALIVE_INTERVAL_MS);
+const KEEP_ALIVE_INTERVAL_MS = configuredKeepAliveInterval > 0
+  ? configuredKeepAliveInterval
+  : 10 * 60 * 1000;
+let keepAliveTimer = null;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -327,14 +332,39 @@ const server = http.createServer((req, res) => {
   send(res, 404, 'Not found', 'text/plain; charset=utf-8');
 });
 
+function startRenderKeepAlive() {
+  if (!process.env.RENDER_EXTERNAL_URL) return;
+
+  let healthUrl;
+  try {
+    healthUrl = new URL('/healthz', process.env.RENDER_EXTERNAL_URL).toString();
+  } catch {
+    console.error('Unable to configure Render keep-alive: invalid external URL');
+    return;
+  }
+
+  keepAliveTimer = setInterval(async () => {
+    try {
+      const response = await fetch(healthUrl, { signal: AbortSignal.timeout(30_000) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await response.text();
+    } catch (error) {
+      console.error(`Render keep-alive failed: ${error.message}`);
+    }
+  }, KEEP_ALIVE_INTERVAL_MS);
+  console.log(`Render keep-alive enabled (${Math.round(KEEP_ALIVE_INTERVAL_MS / 1000)}-second interval)`);
+}
+
 server.listen(PORT, HOST, () => {
   const address = server.address();
   const listeningPort = typeof address === 'object' && address ? address.port : PORT;
   console.log(`Clocktower server listening on http://${HOST}:${listeningPort}`);
   if (CONTROLLER_KEY) console.log('Controller access-key protection is enabled');
+  startRenderKeepAlive();
 });
 
 function shutdown() {
+  if (keepAliveTimer) clearInterval(keepAliveTimer);
   for (const waiter of [...stateWaiters]) {
     stateWaiters.delete(waiter);
     clearTimeout(waiter.timeout);
