@@ -114,8 +114,10 @@ for FILE in display.html controller.html lobby.html; do
             IP_FILE="${FILE%.html}_${IP//./_}.html"
             cp "$FILE" "$IP_FILE"
             
-            # Replace YOUR_IP with actual IP in the copy
-            sed -i '' "s|const ws = new WebSocket('ws://YOUR_IP:8080');|const ws = new WebSocket('ws://$IP:8080');|" "$IP_FILE"
+            # Replace every placeholder in the copy. Each page formats its
+            # WebSocket connection slightly differently, so matching the
+            # placeholder is more robust than matching a whole source line.
+            sed -i '' "s|YOUR_IP|$IP|g" "$IP_FILE"
             echo "✅ Created $IP_FILE with IP: $IP"
         else
             echo "❌ ERROR: $FILE contains hardcoded IP address!"

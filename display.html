@@ -191,6 +191,49 @@
     50% { transform: scale(1.05); }
   }
 
+  /* Background-music status stays visible while a track is playing. */
+  #nowPlayingToast {
+    position: fixed;
+    top: clamp(12px, 2vh, 24px);
+    right: clamp(12px, 2vw, 28px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: min(390px, calc(100vw - 24px));
+    padding: 11px 15px;
+    color: rgba(255, 246, 218, 0.96);
+    background: rgba(12, 10, 18, 0.48);
+    border: 1px solid rgba(240, 211, 130, 0.32);
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(5px);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(18px) scale(0.96);
+    transition: opacity 0.35s ease, transform 0.5s ease;
+  }
+  #nowPlayingToast.visible {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  .now-playing-icon {
+    flex: 0 0 auto;
+    color: #f2cd70;
+    font-size: 1.15em;
+    line-height: 1;
+    text-shadow: 0 0 10px rgba(242, 205, 112, 0.5);
+  }
+  .now-playing-text {
+    overflow: hidden;
+    min-width: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.76em, 1.4vw, 0.95em);
+    letter-spacing: 0.5px;
+  }
+
   .player-card {
     position: absolute;
     text-align: center;
@@ -1708,6 +1751,10 @@
   <div class="timer-label">Time Remaining</div>
   <div class="timer-clock" id="timerClock">0:00</div>
 </div>
+<div id="nowPlayingToast" aria-live="polite">
+  <span class="now-playing-icon">♬</span>
+  <span class="now-playing-text" id="nowPlayingText"></span>
+</div>
 <div id="lobbyQr">
   <div class="lobby-qr-title">Join Game</div>
   <canvas id="lobbyQrCanvas" width="320" height="320"></canvas>
@@ -2279,10 +2326,14 @@ let execFxActive = {};   // player name -> true while its execution FX plays (bo
 // before then, and on unlock we prime the tab + kick off the right music.
 let audioUnlocked = false;
 
-// Night 1 is the join-game lobby, so keep its background silent. Sound effects
-// still work after the gesture gate is cleared.
+// Night 1 is the join-game lobby and has its own background-music category.
 function isLobbyPhase() {
   return phase.toLowerCase() === 'night' && Number(phaseNumber) === 1;
+}
+
+function backgroundCategory() {
+  if (isLobbyPhase()) return 'lobby-sounds';
+  return phase.toLowerCase() === 'day' ? 'morning-sounds' : 'night-sounds';
 }
 
 function unlockAudio() {
@@ -2304,9 +2355,8 @@ function unlockAudio() {
   }
   // Start background music for whatever phase we're already in (phase-change
   // handlers only fire on a transition, which may not happen after load).
-  const key = phase.toLowerCase() === 'day' ? 'day' : 'night';
-  if (!currentAudio && !isLobbyPhase()) {
-    playRandomSound(key === 'day' ? 'morning-sounds' : 'night-sounds');
+  if (!currentAudio) {
+    playRandomSound(backgroundCategory());
   }
 }
 window.addEventListener('DOMContentLoaded', () => {
@@ -2358,7 +2408,7 @@ function runPhaseSweep(phaseKey) {
     playRandomSound('morning-sounds');
   } else {
     playSfx('owl-sounds', 0.4, 1500);
-    if (!isLobbyPhase()) playRandomSound('night-sounds');
+    playRandomSound(backgroundCategory());
   }
 }
 
@@ -2811,7 +2861,7 @@ function shuffleTracks(arr) {
 // switching category or when it runs dry. `avoid` skips a track at the front so a
 // reshuffle doesn't immediately repeat the one just played.
 function playRandomSound(category, avoid) {
-  if (!audioUnlocked || isLobbyPhase()) return Promise.resolve();
+  if (!audioUnlocked) return Promise.resolve();
   return fetch(`/api/sounds/${category}`)
     .then(r => r.ok ? r.json() : [])
     .then(files => {
@@ -2863,9 +2913,24 @@ function trackLabel(path) {
   return path.split('/').pop().replace(/\.[^.]+$/, '');
 }
 
+function showNowPlaying(label) {
+  const toast = document.getElementById('nowPlayingToast');
+  const text = document.getElementById('nowPlayingText');
+  if (!toast || !text) return;
+  text.textContent = `Now playing: ${label}`;
+  toast.classList.add('visible');
+}
+
+function hideNowPlaying() {
+  const toast = document.getElementById('nowPlayingToast');
+  if (toast) toast.classList.remove('visible');
+}
+
 // Tell the controller what's playing (partial state; server merges it).
 function reportNowPlaying(path) {
   const label = trackLabel(path);
+  if (label) showNowPlaying(label);
+  else hideNowPlaying();
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ nowPlaying: label }));
   }
@@ -3186,12 +3251,19 @@ function render() {
   playersContainer.innerHTML = "";
   updateLobbyQr();
 
-  // A new game returns to Night 1. Stop any music that was playing from the
-  // previous game so the visible JOIN GAME lobby remains silent.
-  if (isLobbyPhase() && currentAudio) stopSound();
-
   // Update theme based on phase
   const phaseKey = phase.toLowerCase() === 'day' ? 'day' : 'night';
+
+  // A new game returns to Night 1. Replace any music from the previous game
+  // with the dedicated lobby playlist. Phase transitions are handled by the
+  // sweep below, which avoids consuming two lobby tracks at once.
+  if (isLobbyPhase() && audioUnlocked &&
+      (!currentAudio || currentCategory !== 'lobby-sounds') &&
+      (firstRender || prevPhaseKey === phaseKey)) {
+    stopSound();
+    playRandomSound('lobby-sounds');
+  }
+
   document.body.className = phaseKey === 'day' ? 'day-theme' : 'night-theme';
 
   // Sweep on phase change (skip the very first render / connect)
