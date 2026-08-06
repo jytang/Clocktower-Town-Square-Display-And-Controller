@@ -2298,13 +2298,8 @@ const onBlockVotesDisplay = document.getElementById("onBlockVotes");
 const finalDayWarning = document.getElementById("finalDayWarning");
 const clockHands = document.getElementById("clockHands");
 
-// Use the deployed origin in production and the default local port for file-based tests.
-const WS_URL = window.location.protocol === 'file:'
-  ? 'ws://localhost:8000'
-  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
-const displayWsUrl = new URL(WS_URL);
-displayWsUrl.searchParams.set('role', 'display');
-const ws = new WebSocket(displayWsUrl);
+const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+let stateRevision = -1;
 
 let players = [];
 let phase = "Night";
@@ -2936,9 +2931,11 @@ function reportNowPlaying(path) {
   const label = trackLabel(path);
   if (label) showNowPlaying(label);
   else hideNowPlaying();
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ nowPlaying: label }));
-  }
+  void fetch(`${API_BASE}/api/display`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nowPlaying: label }),
+  }).catch(error => console.error('Unable to report current track:', error));
 }
 
 function stopSound() {
@@ -2992,15 +2989,7 @@ function handleAudioCommand(cmd) {
   }
 }
 
-ws.onopen = () => {
-  console.log("WebSocket connected!");
-  phaseDisplay.classList.remove("connecting");
-};
-ws.onerror = (err) => console.error("WebSocket error:", err);
-ws.onclose = () => console.log("WebSocket closed.");
-
-ws.onmessage = (msg) => {
-  const data = JSON.parse(msg.data);
+function applyServerState(data) {
   players = data.players || [];
 
   // Chime when a new player joins the lobby. Track ids we've already seen so only
@@ -3050,7 +3039,30 @@ ws.onmessage = (msg) => {
   }
 
   render();
-};
+}
+
+const waitForRetry = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function pollState() {
+  while (true) {
+    try {
+      const response = await fetch(`${API_BASE}/api/state?since=${stateRevision}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`State request failed: ${response.status}`);
+      const data = await response.json();
+      const unchanged = data.revision === stateRevision;
+      stateRevision = data.revision;
+      applyServerState(data);
+      phaseDisplay.classList.remove('connecting');
+      if (unchanged) await waitForRetry(250);
+    } catch (error) {
+      console.error('State polling error:', error);
+      phaseDisplay.classList.add('connecting');
+      await waitForRetry(1500);
+    }
+  }
+}
+
+void pollState();
 let lastAudioNonce = null;
 let lastResultNonce = null;
 let lastTimerNonce = null;

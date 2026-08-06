@@ -2,7 +2,6 @@ const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
 const { test } = require('node:test');
-const WebSocket = require('ws');
 
 const projectRoot = path.resolve(__dirname, '..');
 
@@ -31,68 +30,67 @@ function startServer() {
   return { child, ready };
 }
 
-function openSocket(url) {
-  return new Promise((resolve, reject) => {
-    const socket = new WebSocket(url);
-    socket.once('open', () => resolve(socket));
-    socket.once('error', reject);
+function postJson(url, data, headers = {}) {
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(data),
   });
 }
 
-function nextState(socket, predicate = () => true) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('WebSocket state timed out')), 2000);
-    const onMessage = raw => {
-      const state = JSON.parse(raw.toString());
-      if (predicate(state)) {
-        clearTimeout(timeout);
-        socket.off('message', onMessage);
-        resolve(state);
-      }
-    };
-    socket.on('message', onMessage);
-  });
-}
-
-test('serves the app and enforces WebSocket roles', async t => {
+test('serves the app and synchronizes state over HTTP', async t => {
   const { child, ready } = startServer();
   t.after(() => child.kill('SIGTERM'));
   const port = await ready;
-  const httpBase = `http://127.0.0.1:${port}`;
-  const wsBase = `ws://127.0.0.1:${port}`;
+  const base = `http://127.0.0.1:${port}`;
 
   for (const route of ['/', '/display', '/controller', '/lobby', '/healthz']) {
-    const response = await fetch(`${httpBase}${route}`);
+    const response = await fetch(`${base}${route}`);
     assert.equal(response.status, 200, route);
   }
 
-  const sounds = await fetch(`${httpBase}/api/sounds/night-sounds`);
+  const sounds = await fetch(`${base}/api/sounds/night-sounds`);
   assert.equal(sounds.status, 200);
-  assert.ok((await sounds.json()).length > 0);
+  const soundPaths = await sounds.json();
+  assert.ok(soundPaths.length > 0);
+  const spacedSound = soundPaths.find(soundPath => soundPath.includes(' '));
+  assert.ok(spacedSound);
+  assert.equal((await fetch(`${base}/${spacedSound}`)).status, 200);
 
-  const denied = new WebSocket(`${wsBase}?role=controller&key=wrong`);
-  const deniedCode = await new Promise((resolve, reject) => {
-    denied.once('close', resolve);
-    denied.once('error', reject);
-  });
-  assert.equal(deniedCode, 4001);
+  const initial = await (await fetch(`${base}/api/state`)).json();
+  assert.equal(initial.phase, 'Night');
+  assert.equal(initial.revision, 0);
 
-  const viewer = await openSocket(wsBase);
-  const lobby = await openSocket(`${wsBase}?role=lobby`);
-  const controller = await openSocket(`${wsBase}?role=controller&key=test-secret`);
-  t.after(() => [viewer, lobby, controller].forEach(socket => socket.close()));
+  const denied = await postJson(
+    `${base}/api/controller`,
+    { phase: 'Day' },
+    { 'X-Controller-Key': 'wrong' },
+  );
+  assert.equal(denied.status, 401);
 
-  const joinedState = nextState(viewer, state => state.players?.some(player => player.name === 'Alice'));
-  lobby.send(JSON.stringify({ joinRequest: { id: 'alice-1', name: 'Alice' } }));
-  assert.equal((await joinedState).players.length, 1);
+  const joinWait = fetch(`${base}/api/state?since=${initial.revision}`);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  const joined = await postJson(`${base}/api/join`, { id: 'alice-1', name: 'Alice' });
+  assert.equal(joined.status, 200);
+  const joinedState = await (await joinWait).json();
+  assert.equal(joinedState.players.length, 1);
+  assert.equal(joinedState.players[0].name, 'Alice');
 
-  viewer.send(JSON.stringify({ phase: 'Day', phaseNumber: 99 }));
-  const unchangedViewer = await openSocket(wsBase);
-  const unchangedState = await nextState(unchangedViewer);
-  unchangedViewer.close();
-  assert.equal(unchangedState.phase, 'Night');
+  const updateWait = fetch(`${base}/api/state?since=${joinedState.revision}`);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  const updated = await postJson(
+    `${base}/api/controller`,
+    { phase: 'Day', phaseNumber: 2, players: joinedState.players },
+    { 'X-Controller-Key': 'test-secret' },
+  );
+  assert.equal(updated.status, 200);
+  const updatedState = await (await updateWait).json();
+  assert.equal(updatedState.phase, 'Day');
+  assert.equal(updatedState.phaseNumber, 2);
+  assert.equal(updatedState.players.length, 1);
 
-  const updatedState = nextState(viewer, state => state.phase === 'Day' && state.phaseNumber === 2);
-  controller.send(JSON.stringify({ phase: 'Day', phaseNumber: 2 }));
-  assert.equal((await updatedState).players.length, 1);
+  const displayUpdate = await postJson(`${base}/api/display`, { nowPlaying: 'Test Track' });
+  assert.equal(displayUpdate.status, 200);
+  const finalState = await (await fetch(`${base}/api/state`)).json();
+  assert.equal(finalState.nowPlaying, 'Test Track');
 });

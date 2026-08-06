@@ -2,13 +2,14 @@ const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
-const WebSocket = require('ws');
 
 const HOST = process.env.HOST || '0.0.0.0';
 const PORT = process.env.PORT === undefined ? 8000 : Number(process.env.PORT);
 const ROOT = __dirname;
 const ASSETS_ROOT = path.join(ROOT, 'assets');
 const CONTROLLER_KEY = process.env.CONTROLLER_KEY || '';
+const MAX_JSON_BYTES = 5 * 1024 * 1024;
+const LONG_POLL_TIMEOUT_MS = 15_000;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -35,9 +36,92 @@ const pageRoutes = new Map([
   ['/favicon.ico', 'favicon.ico'],
 ]);
 
+let state = freshGameState();
+let revision = 0;
+const stateWaiters = new Set();
+
+function freshGameState() {
+  return {
+    players: [],
+    phase: 'Night',
+    phaseNumber: 1,
+    onBlockPlayer: null,
+    onBlockVotes: 0,
+    nominatedPlayer: null,
+    nominatorPlayer: null,
+    nowPlaying: null,
+    gameResult: null,
+    gameId: Date.now(),
+  };
+}
+
 function send(res, statusCode, body, contentType, headers = {}) {
   res.writeHead(statusCode, { 'Content-Type': contentType, ...headers });
   res.end(body);
+}
+
+function sendJson(res, statusCode, value) {
+  send(res, statusCode, JSON.stringify(value), 'application/json; charset=utf-8', {
+    'Cache-Control': 'no-store',
+  });
+}
+
+function currentState() {
+  return { ...state, revision };
+}
+
+function sendCurrentState(res) {
+  sendJson(res, 200, currentState());
+}
+
+function finishWaiter(waiter) {
+  if (!stateWaiters.delete(waiter)) return;
+  clearTimeout(waiter.timeout);
+  sendCurrentState(waiter.res);
+}
+
+function publishState() {
+  revision += 1;
+  for (const waiter of [...stateWaiters]) finishWaiter(waiter);
+}
+
+function waitForState(res) {
+  const waiter = { res, timeout: null };
+  waiter.timeout = setTimeout(() => finishWaiter(waiter), LONG_POLL_TIMEOUT_MS);
+  stateWaiters.add(waiter);
+  res.on('close', () => {
+    if (stateWaiters.delete(waiter)) clearTimeout(waiter.timeout);
+  });
+}
+
+function readJson(req, res, callback) {
+  let body = '';
+  let bytes = 0;
+  let tooLarge = false;
+
+  req.setEncoding('utf8');
+  req.on('data', chunk => {
+    bytes += Buffer.byteLength(chunk);
+    if (bytes > MAX_JSON_BYTES) {
+      tooLarge = true;
+      return;
+    }
+    body += chunk;
+  });
+  req.on('end', () => {
+    if (tooLarge) {
+      sendJson(res, 413, { error: 'Request body too large' });
+      return;
+    }
+    try {
+      const data = JSON.parse(body || '{}');
+      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid payload');
+      callback(data);
+    } catch {
+      sendJson(res, 400, { error: 'Invalid JSON payload' });
+    }
+  });
+  req.on('error', () => sendJson(res, 400, { error: 'Unable to read request' }));
 }
 
 function sendFile(req, res, filePath, cacheControl = 'no-store') {
@@ -60,16 +144,55 @@ function sendFile(req, res, filePath, cacheControl = 'no-store') {
     }
 
     const stream = fs.createReadStream(filePath);
-    stream.on('error', () => {
-      if (!res.headersSent) {
-        send(res, 500, 'Unable to read file', 'text/plain; charset=utf-8');
-      } else {
-        res.destroy();
-      }
-    });
+    stream.on('error', () => res.destroy());
     stream.pipe(res);
   });
 }
+
+function keysMatch(providedKey) {
+  if (!CONTROLLER_KEY) return true;
+  const expected = Buffer.from(CONTROLLER_KEY);
+  const provided = Buffer.from(providedKey || '');
+  return expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
+}
+
+function handleJoinRequest(joinRequest) {
+  const name = typeof joinRequest.name === 'string' ? joinRequest.name.trim() : '';
+  if (!name || !joinRequest.id) return false;
+
+  const existing = state.players.find(player => player.id === joinRequest.id);
+  if (existing) {
+    existing.name = name;
+    if (joinRequest.avatar !== undefined) existing.avatar = joinRequest.avatar || null;
+    if (joinRequest.pronouns !== undefined) existing.pronouns = (joinRequest.pronouns || '').trim() || null;
+  } else {
+    state.players.push({
+      id: joinRequest.id,
+      name,
+      alive: true,
+      traveler: false,
+      ghostVote: true,
+      avatar: joinRequest.avatar || null,
+      pronouns: (joinRequest.pronouns || '').trim() || null,
+    });
+  }
+  publishState();
+  return true;
+}
+
+const controllerFields = [
+  'players',
+  'phase',
+  'phaseNumber',
+  'onBlockPlayer',
+  'onBlockVotes',
+  'nominatedPlayer',
+  'nominatorPlayer',
+  'audioCmd',
+  'timerCmd',
+  'galleryCmd',
+  'gameResult',
+];
 
 const landingPage = `<!doctype html>
 <html lang="en">
@@ -98,21 +221,72 @@ const landingPage = `<!doctype html>
 </html>`;
 
 const server = http.createServer((req, res) => {
+  let requestUrl;
+  let pathname;
+  try {
+    requestUrl = new URL(req.url, 'http://localhost');
+    pathname = decodeURIComponent(requestUrl.pathname);
+  } catch {
+    send(res, 400, 'Bad request', 'text/plain; charset=utf-8');
+    return;
+  }
+  if (req.method === 'GET' && pathname === '/api/state') {
+    const since = Number(requestUrl.searchParams.get('since'));
+    if (requestUrl.searchParams.has('since') && Number.isInteger(since) && since === revision) waitForState(res);
+    else sendCurrentState(res);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/join') {
+    readJson(req, res, data => {
+      if (!handleJoinRequest(data)) {
+        sendJson(res, 400, { error: 'Player id and name are required' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, revision });
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/display') {
+    readJson(req, res, data => {
+      if (!Object.hasOwn(data, 'nowPlaying')) {
+        sendJson(res, 400, { error: 'nowPlaying is required' });
+        return;
+      }
+      state.nowPlaying = data.nowPlaying || null;
+      publishState();
+      sendJson(res, 200, { ok: true, revision });
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/controller') {
+    if (!keysMatch(req.headers['x-controller-key'])) {
+      sendJson(res, 401, { error: 'Controller key required' });
+      return;
+    }
+    readJson(req, res, data => {
+      if (data.newGame) {
+        state = freshGameState();
+      } else {
+        for (const field of controllerFields) {
+          if (Object.hasOwn(data, field)) state[field] = data[field];
+        }
+      }
+      publishState();
+      sendJson(res, 200, { ok: true, revision });
+    });
+    return;
+  }
+
   if (!['GET', 'HEAD'].includes(req.method)) {
     send(res, 405, 'Method not allowed', 'text/plain; charset=utf-8', { Allow: 'GET, HEAD' });
     return;
   }
 
-  let pathname;
-  try {
-    pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-  } catch {
-    send(res, 400, 'Bad request', 'text/plain; charset=utf-8');
-    return;
-  }
-
   if (pathname === '/healthz') {
-    send(res, 200, JSON.stringify({ status: 'ok' }), 'application/json; charset=utf-8', { 'Cache-Control': 'no-store' });
+    sendJson(res, 200, { status: 'ok' });
     return;
   }
 
@@ -130,7 +304,7 @@ const server = http.createServer((req, res) => {
         : files
           .filter(file => /\.(mp3|ogg|wav|m4a)$/i.test(file))
           .map(file => `assets/${soundMatch[1]}/${file}`);
-      send(res, 200, req.method === 'HEAD' ? '' : JSON.stringify(sounds), 'application/json; charset=utf-8', { 'Cache-Control': 'no-store' });
+      sendJson(res, 200, sounds);
     });
     return;
   }
@@ -153,141 +327,19 @@ const server = http.createServer((req, res) => {
   send(res, 404, 'Not found', 'text/plain; charset=utf-8');
 });
 
-const wss = new WebSocket.Server({ server });
-
-// gameId scopes a lobby session: starting a new game lets the same devices join again.
-let state = {
-  players: [],
-  phase: 'Night',
-  phaseNumber: 1,
-  onBlockPlayer: null,
-  onBlockVotes: 0,
-  nominatedPlayer: null,
-  nominatorPlayer: null,
-  nowPlaying: null,
-  gameId: Date.now(),
-};
-
-function broadcast() {
-  const payload = JSON.stringify(state);
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(payload);
-    }
-  });
-}
-
-function keysMatch(providedKey) {
-  if (!CONTROLLER_KEY) return true;
-  const expected = Buffer.from(CONTROLLER_KEY);
-  const provided = Buffer.from(providedKey || '');
-  return expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
-}
-
-function handleJoinRequest(joinRequest) {
-  const name = (joinRequest.name || '').trim();
-  if (!name || !joinRequest.id) return;
-
-  const existing = state.players.find(player => player.id === joinRequest.id);
-  if (existing) {
-    existing.name = name;
-    if (joinRequest.avatar !== undefined) existing.avatar = joinRequest.avatar || null;
-    if (joinRequest.pronouns !== undefined) existing.pronouns = (joinRequest.pronouns || '').trim() || null;
-  } else {
-    state.players.push({
-      id: joinRequest.id,
-      name,
-      alive: true,
-      traveler: false,
-      ghostVote: true,
-      avatar: joinRequest.avatar || null,
-      pronouns: (joinRequest.pronouns || '').trim() || null,
-    });
-  }
-  broadcast();
-}
-
-wss.on('connection', (ws, request) => {
-  const connectionUrl = new URL(request.url, 'http://localhost');
-  const role = connectionUrl.searchParams.get('role') || 'viewer';
-
-  if (role === 'controller' && !keysMatch(connectionUrl.searchParams.get('key'))) {
-    ws.close(4001, 'Controller key required');
-    return;
-  }
-
-  ws.send(JSON.stringify(state));
-
-  ws.on('message', message => {
-    let data;
-    try {
-      data = JSON.parse(message.toString());
-    } catch {
-      ws.send(JSON.stringify({ error: 'Invalid JSON message' }));
-      return;
-    }
-
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      return;
-    }
-
-    if (role === 'lobby') {
-      if (data.joinRequest && typeof data.joinRequest === 'object') {
-        handleJoinRequest(data.joinRequest);
-      }
-      return;
-    }
-
-    if (role === 'display') {
-      if (Object.hasOwn(data, 'nowPlaying')) {
-        state.nowPlaying = data.nowPlaying;
-        broadcast();
-      }
-      return;
-    }
-
-    if (role !== 'controller') {
-      return;
-    }
-
-    if (data.newGame) {
-      state = {
-        players: [],
-        phase: 'Night',
-        phaseNumber: 1,
-        onBlockPlayer: null,
-        onBlockVotes: 0,
-        nominatedPlayer: null,
-        nominatorPlayer: null,
-        nowPlaying: null,
-        gameResult: null,
-        gameId: Date.now(),
-      };
-      broadcast();
-      return;
-    }
-
-    if (data.joinRequest) {
-      handleJoinRequest(data.joinRequest);
-      return;
-    }
-
-    state = Object.assign(state, data);
-    broadcast();
-  });
-});
-
 server.listen(PORT, HOST, () => {
   const address = server.address();
   const listeningPort = typeof address === 'object' && address ? address.port : PORT;
   console.log(`Clocktower server listening on http://${HOST}:${listeningPort}`);
-  if (CONTROLLER_KEY) {
-    console.log('Controller access-key protection is enabled');
-  }
+  if (CONTROLLER_KEY) console.log('Controller access-key protection is enabled');
 });
 
 function shutdown() {
-  wss.clients.forEach(client => client.close(1001, 'Server shutting down'));
+  for (const waiter of [...stateWaiters]) {
+    stateWaiters.delete(waiter);
+    clearTimeout(waiter.timeout);
+    sendJson(waiter.res, 503, { error: 'Server shutting down' });
+  }
   server.close(() => process.exit(0));
 }
 

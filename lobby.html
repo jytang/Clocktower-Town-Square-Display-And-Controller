@@ -339,6 +339,8 @@ let players = [];        // latest known roster (to detect name clashes)
 let myName = null;       // the name we successfully joined as
 let myId = null;         // this device's stable player id for the current game
 let currentGameId = null;// server's current game session id
+let connected = false;
+let stateRevision = -1;
 
 // Mint a stable, unique player id. Identity is the id (not the name), so a
 // player can rename themselves and still update their own seat.
@@ -347,26 +349,42 @@ function newPlayerId() {
   return 'p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
-// Use the deployed origin in production and the default local port for file-based tests.
-const WS_URL = window.location.protocol === 'file:'
-  ? 'ws://localhost:8000'
-  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
-const lobbyWsUrl = new URL(WS_URL);
-lobbyWsUrl.searchParams.set('role', 'lobby');
-const ws = new WebSocket(lobbyWsUrl);
+const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+const waitForRetry = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-ws.onopen = () => { connEl.textContent = 'Connected'; connEl.className = 'conn connected'; };
-ws.onclose = () => { connEl.textContent = 'Disconnected'; connEl.className = 'conn disconnected'; };
-ws.onerror = () => { connEl.textContent = 'Disconnected'; connEl.className = 'conn disconnected'; };
-
-ws.onmessage = (msg) => {
-  try {
-    const data = JSON.parse(msg.data);
-    if (Array.isArray(data.players)) players = data.players;
-    if (data.gameId !== undefined) handleGameId(data.gameId);
-  } catch (e) {}
+function setConnected(value) {
+  connected = value;
+  connEl.textContent = value ? 'Connected' : 'Disconnected';
+  connEl.className = value ? 'conn connected' : 'conn disconnected';
   refreshJoinState();
-};
+}
+
+function applyServerState(data) {
+  if (Array.isArray(data.players)) players = data.players;
+  if (data.gameId !== undefined) handleGameId(data.gameId);
+  refreshJoinState();
+}
+
+async function pollState() {
+  while (true) {
+    try {
+      const response = await fetch(`${API_BASE}/api/state?since=${stateRevision}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`State request failed: ${response.status}`);
+      const data = await response.json();
+      const unchanged = data.revision === stateRevision;
+      stateRevision = data.revision;
+      applyServerState(data);
+      setConnected(true);
+      if (unchanged) await waitForRetry(250);
+    } catch (error) {
+      console.error('State polling error:', error);
+      setConnected(false);
+      await waitForRetry(1500);
+    }
+  }
+}
+
+void pollState();
 
 // Mirror the display's deterministic avatar color + initials so the preview
 // (and the eventual emblem) match when no photo is chosen.
@@ -407,7 +425,7 @@ function updatePreview() {
 
 function refreshJoinState() {
   const name = nameInput.value.trim();
-  joinBtn.disabled = name.length < 2 || name.length > 20 || ws.readyState !== WebSocket.OPEN;
+  joinBtn.disabled = name.length < 2 || name.length > 20 || !connected;
 }
 
 // This device's seat for a game session, stored as { gameId, id, name }. The id
@@ -651,14 +669,14 @@ cropUseBtn.onclick = () => {
   updatePreview();
 };
 
-joinBtn.onclick = () => {
+joinBtn.onclick = async () => {
   const name = nameInput.value.trim();
   if (name.length < 2 || name.length > 20) {
     statusLine.textContent = 'Name must be 2–20 characters.';
     statusLine.className = 'status-line err';
     return;
   }
-  if (ws.readyState !== WebSocket.OPEN) {
+  if (!connected) {
     statusLine.textContent = 'Not connected — check your Wi-Fi and try again.';
     statusLine.className = 'status-line err';
     return;
@@ -678,14 +696,23 @@ joinBtn.onclick = () => {
     }
   }
 
-  ws.send(JSON.stringify({
-    joinRequest: {
+  const response = await fetch(`${API_BASE}/api/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       id: myId,
       name,
       avatar: avatarData,
       pronouns: pronounsInput.value.trim()
-    }
-  }));
+    }),
+  }).catch(() => null);
+
+  if (!response || !response.ok) {
+    statusLine.textContent = 'Unable to join — check your connection and try again.';
+    statusLine.className = 'status-line err';
+    setConnected(false);
+    return;
+  }
 
   myName = name;
   setDeviceJoin(myId, name);

@@ -1,6 +1,6 @@
 # Blood on the Clocktower - Digital Storyteller System
 
-A digital town-square display and controller for running Blood on the Clocktower games across multiple devices. The Node.js service hosts all three browser interfaces and keeps them synchronized over WebSockets.
+A digital town-square display and controller for running Blood on the Clocktower games across multiple devices. The Node.js service hosts all three browser interfaces and keeps them synchronized with HTTP long-polling.
 
 ## Interfaces
 
@@ -27,7 +27,7 @@ Set `PORT` to use a different port.
 
 ## Deploy to Render
 
-The included `render.yaml` deploys the project as one free Render Web Service with managed HTTPS and secure WebSockets.
+The included `render.yaml` deploys the project as one free Render Web Service with managed HTTPS. It uses ordinary HTTP requests rather than persistent WebSocket connections.
 
 1. Push this repository to GitHub, GitLab, or Bitbucket.
 2. In the Render dashboard, select **New > Blueprint**.

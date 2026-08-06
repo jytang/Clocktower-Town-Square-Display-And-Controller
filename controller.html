@@ -1009,22 +1009,9 @@ let nominatingPlayer = null; // index of player whose nominate panel is open
 let blockingPlayer = null;   // index of player whose put-on-block vote picker is open
 let dragIndex = null;
 
-// Use the deployed origin in production and the default local port for file-based tests.
-const WS_URL = window.location.protocol === 'file:'
-  ? 'ws://localhost:8000'
-  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
 let controllerKey = sessionStorage.getItem('controllerKey') || '';
-
-function controllerWebSocketUrl() {
-  const url = new URL(WS_URL);
-  url.searchParams.set('role', 'controller');
-  if (controllerKey) url.searchParams.set('key', controllerKey);
-  return url.toString();
-}
-// ws is reassigned on every reconnect, so senders must always read the current
-// socket. connect() is defined below and called once the handlers exist.
-let ws;
-let reconnectTimer = null;
+let stateRevision = -1;
 
 // Set initial game state to Night 1
 phaseSelect.value = 'Night';
@@ -1041,57 +1028,9 @@ function updateConnectionStatus(connected) {
   }
 }
 
-// (Re)connect to the server. On any close/error, retry every 2s until the
-// socket opens again — so the controller survives server restarts, WiFi
-// blips, or laptop sleep without a manual page refresh.
-function scheduleReconnect() {
-  if (reconnectTimer) return; // already pending
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    console.log("Reconnecting...");
-    connect();
-  }, 2000);
-}
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-function connect() {
-  ws = new WebSocket(controllerWebSocketUrl());
-
-  ws.onopen = () => {
-    console.log("WebSocket connected!");
-    updateConnectionStatus(true);
-    // Push our current roster/state so a freshly (re)started server catches up.
-    sendUpdate();
-  };
-
-  ws.onerror = (err) => {
-    console.error("WebSocket error:", err);
-    updateConnectionStatus(false);
-    // onclose fires after onerror and drives the reconnect.
-  };
-
-  ws.onclose = (event) => {
-    console.log("WebSocket closed.");
-    updateConnectionStatus(false);
-    if (event.code === 4001) {
-      sessionStorage.removeItem('controllerKey');
-      const enteredKey = window.prompt('Enter the storyteller controller key:');
-      if (enteredKey) {
-        controllerKey = enteredKey.trim();
-        sessionStorage.setItem('controllerKey', controllerKey);
-        connect();
-      } else {
-        connectionText.textContent = 'Controller key required';
-      }
-      return;
-    }
-    scheduleReconnect();
-  };
-
-  ws.onmessage = onWsMessage;
-}
-
-function onWsMessage(msg) {
-  const data = JSON.parse(msg.data);
+function applyServerState(data) {
   if (data.players) state.players = data.players;
   if (data.phase) {
     // Clear nominated and on-block when transitioning to Night
@@ -1112,7 +1051,55 @@ function onWsMessage(msg) {
   renderPlayers();
 }
 
-connect();
+async function pollState() {
+  while (true) {
+    try {
+      const response = await fetch(`${API_BASE}/api/state?since=${stateRevision}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`State request failed: ${response.status}`);
+      const data = await response.json();
+      const unchanged = data.revision === stateRevision;
+      stateRevision = data.revision;
+      applyServerState(data);
+      updateConnectionStatus(true);
+      if (unchanged) await wait(250);
+    } catch (error) {
+      console.error('State polling error:', error);
+      updateConnectionStatus(false);
+      await wait(1500);
+    }
+  }
+}
+
+async function postController(data, allowKeyPrompt = true) {
+  const response = await fetch(`${API_BASE}/api/controller`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Controller-Key': controllerKey,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (response.status === 401 && allowKeyPrompt) {
+    sessionStorage.removeItem('controllerKey');
+    const enteredKey = window.prompt('Enter the storyteller controller key:');
+    if (!enteredKey) {
+      connectionText.textContent = 'Controller key required';
+      throw new Error('Controller key required');
+    }
+    controllerKey = enteredKey.trim();
+    sessionStorage.setItem('controllerKey', controllerKey);
+    return postController(data, false);
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) connectionText.textContent = 'Invalid controller key';
+    throw new Error(`Controller update failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+void pollState();
 
 // Show what the display is currently playing
 function renderNowPlaying() {
@@ -1127,6 +1114,7 @@ function renderNowPlaying() {
   }
 }
 
+let pendingUpdate = null;
 function sendUpdate() {
   const data = {
     players: state.players,
@@ -1141,9 +1129,10 @@ function sendUpdate() {
     galleryCmd: state.galleryCmd,
     gameResult: state.gameResult
   };
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(data));
-  }
+  clearTimeout(pendingUpdate);
+  pendingUpdate = setTimeout(() => {
+    void postController(data).catch(error => console.error(error));
+  }, 50);
   renderPlayers();
 }
 
@@ -1907,9 +1896,7 @@ document.getElementById("evilWinsBtn").onclick = () => declareWinner('evil');
 // every phone to re-join the lobby.
 document.getElementById("newGameBtn").onclick = () => {
   if (!confirm('Start a new game? This clears all players and lets everyone re-join the lobby.')) return;
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ newGame: true }));
-  }
+  void postController({ newGame: true }).catch(error => console.error(error));
 };
 
 renderPlayers();

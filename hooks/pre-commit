@@ -13,18 +13,13 @@ IP_FOUND=false
 for file in "${FILES_TO_CHECK[@]}"; do
     if [ -f "$file" ]; then
         # Check for IPv4 patterns (basic check)
-        if grep -qE "ws://[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]+" "$file"; then
+        if grep -qE "https?://[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]+" "$file"; then
             echo "❌ ERROR: Hardcoded IP address found in $file"
             echo "Please replace with YOUR_IP placeholder before committing"
             exit 1
         fi
         
-        # Check for localhost patterns that shouldn't be committed
-        if grep -qE "ws://(localhost|127\.0\.0\.1|0\.0\.0\.0)" "$file"; then
-            echo "❌ ERROR: Localhost IP found in $file"
-            echo "Please replace with YOUR_IP placeholder before committing"
-            exit 1
-        fi
+        # localhost is allowed as a fallback for file-based browser tests.
     fi
 done
 

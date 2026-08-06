@@ -16,20 +16,23 @@ function generatePlayers(count: number) {
   return players;
 }
 
-/**
- * Setup mock WebSocket using page.routeWebSocket
- */
-async function setupMockWebSocket(page: any, playerCount: number, phase: string = 'Night', phaseNumber: number = 1) {
+async function setupMockState(page: any, data: Record<string, unknown>) {
+  await page.route(/\/api\/state(?:\?.*)?$/, async (route: any) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ ...data, revision: 1 }),
+    });
+  });
+}
+
+async function setupMockPlayers(page: any, playerCount: number, phase: string = 'Night', phaseNumber: number = 1) {
   const data = { 
     players: generatePlayers(playerCount), 
     phase, 
     phaseNumber 
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
 }
 
 /**
@@ -38,7 +41,7 @@ async function setupMockWebSocket(page: any, playerCount: number, phase: string 
 for (let playerCount = 6; playerCount <= 20; playerCount++) {
   test(`Display renders correctly with ${playerCount} players`, async ({ page }) => {
     // Setup mock before navigation
-    await setupMockWebSocket(page, playerCount, 'Night', 1);
+    await setupMockPlayers(page, playerCount, 'Night', 1);
     
     // Navigate to display page
     await page.goto('display.html');
@@ -74,7 +77,7 @@ for (let playerCount = 6; playerCount <= 20; playerCount++) {
   
   // Also test in Day phase
   test(`Display renders correctly with ${playerCount} players in Day phase`, async ({ page }) => {
-    await setupMockWebSocket(page, playerCount, 'Day', 2);
+    await setupMockPlayers(page, playerCount, 'Day', 2);
     
     await page.goto('display.html');
     await page.waitForTimeout(200);
@@ -114,10 +117,7 @@ test('6 players - all alive, no travelers', async ({ page }) => {
     phaseNumber: 1,
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);
@@ -154,10 +154,7 @@ test('20 players - mixed states', async ({ page }) => {
     phaseNumber: 3,
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);
@@ -196,10 +193,7 @@ test('on-block player display and votes calculation', async ({ page }) => {
     onBlockVotes: 5, // 5 votes on the block
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);
@@ -251,10 +245,7 @@ test('votes-to-execute defaults to half alive when no on-block player', async ({
     onBlockVotes: 0,
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);
@@ -288,10 +279,7 @@ test('15 players with on-block player', async ({ page }) => {
     onBlockVotes: 7, // 7 votes
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);
@@ -340,10 +328,7 @@ test('20 players with on-block player', async ({ page }) => {
     onBlockVotes: 8, // 8 votes
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);
@@ -393,10 +378,7 @@ test('nominated player with votes-to-execute calculation', async ({ page }) => {
     nominatedPlayer: 5, // Player 6 is nominated
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);
@@ -444,10 +426,7 @@ test('nominated player without on-block player', async ({ page }) => {
     nominatedPlayer: 2, // Player 3 is nominated
   };
   
-  await page.routeWebSocket(/ws:\/\/.*/, (ws) => {
-    ws.onMessage(() => {});
-    ws.send(JSON.stringify(data));
-  });
+  await setupMockState(page, data);
   
   await page.goto('display.html');
   await page.waitForTimeout(200);

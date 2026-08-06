@@ -21,7 +21,7 @@ if [ -z "$LOCAL_IP" ]; then
 fi
 LOCAL_IP="${LOCAL_IP:-localhost}"
 
-echo "Starting the combined web and WebSocket server..."
+echo "Starting the web server..."
 node server.js &
 SERVER_PID=$!
 
