@@ -347,8 +347,13 @@ function newPlayerId() {
   return 'p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
-// Replace with your server IP
-const ws = new WebSocket('ws://YOUR_IP:8080');
+// Use the deployed origin in production and the default local port for file-based tests.
+const WS_URL = window.location.protocol === 'file:'
+  ? 'ws://localhost:8000'
+  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+const lobbyWsUrl = new URL(WS_URL);
+lobbyWsUrl.searchParams.set('role', 'lobby');
+const ws = new WebSocket(lobbyWsUrl);
 
 ws.onopen = () => { connEl.textContent = 'Connected'; connEl.className = 'conn connected'; };
 ws.onclose = () => { connEl.textContent = 'Disconnected'; connEl.className = 'conn disconnected'; };

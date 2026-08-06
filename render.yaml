@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: botc-display
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: CONTROLLER_KEY
+        generateValue: true

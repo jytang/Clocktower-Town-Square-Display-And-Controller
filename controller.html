@@ -1009,8 +1009,18 @@ let nominatingPlayer = null; // index of player whose nominate panel is open
 let blockingPlayer = null;   // index of player whose put-on-block vote picker is open
 let dragIndex = null;
 
-// Replace with your server IP
-const WS_URL = 'ws://YOUR_IP:8080';
+// Use the deployed origin in production and the default local port for file-based tests.
+const WS_URL = window.location.protocol === 'file:'
+  ? 'ws://localhost:8000'
+  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+let controllerKey = sessionStorage.getItem('controllerKey') || '';
+
+function controllerWebSocketUrl() {
+  const url = new URL(WS_URL);
+  url.searchParams.set('role', 'controller');
+  if (controllerKey) url.searchParams.set('key', controllerKey);
+  return url.toString();
+}
 // ws is reassigned on every reconnect, so senders must always read the current
 // socket. connect() is defined below and called once the handlers exist.
 let ws;
@@ -1044,7 +1054,7 @@ function scheduleReconnect() {
 }
 
 function connect() {
-  ws = new WebSocket(WS_URL);
+  ws = new WebSocket(controllerWebSocketUrl());
 
   ws.onopen = () => {
     console.log("WebSocket connected!");
@@ -1059,9 +1069,21 @@ function connect() {
     // onclose fires after onerror and drives the reconnect.
   };
 
-  ws.onclose = () => {
+  ws.onclose = (event) => {
     console.log("WebSocket closed.");
     updateConnectionStatus(false);
+    if (event.code === 4001) {
+      sessionStorage.removeItem('controllerKey');
+      const enteredKey = window.prompt('Enter the storyteller controller key:');
+      if (enteredKey) {
+        controllerKey = enteredKey.trim();
+        sessionStorage.setItem('controllerKey', controllerKey);
+        connect();
+      } else {
+        connectionText.textContent = 'Controller key required';
+      }
+      return;
+    }
     scheduleReconnect();
   };
 

@@ -4,13 +4,17 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "npx playwright test",
+    "test": "npm run test:server && playwright test",
+    "test:server": "node --test tests/server.test.js",
     "test:ui": "npx playwright test --ui",
     "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "ws": "^8.21.2"
   },

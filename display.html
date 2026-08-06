@@ -2298,8 +2298,13 @@ const onBlockVotesDisplay = document.getElementById("onBlockVotes");
 const finalDayWarning = document.getElementById("finalDayWarning");
 const clockHands = document.getElementById("clockHands");
 
-// Replace with your server IP
-const ws = new WebSocket('ws://YOUR_IP:8080');
+// Use the deployed origin in production and the default local port for file-based tests.
+const WS_URL = window.location.protocol === 'file:'
+  ? 'ws://localhost:8000'
+  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+const displayWsUrl = new URL(WS_URL);
+displayWsUrl.searchParams.set('role', 'display');
+const ws = new WebSocket(displayWsUrl);
 
 let players = [];
 let phase = "Night";
