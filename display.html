@@ -498,6 +498,127 @@
     overflow: hidden;
   }
   .exec-fx { position: absolute; }
+
+  /* ---- Execution hero: giant center portrait on execution ---- */
+  #execHero {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+  }
+  #execHero.show { animation: exec-hero 2.6s cubic-bezier(0.16, 0.84, 0.3, 1) forwards; }
+  .exec-hero-portrait {
+    width: min(38vh, 320px);
+    height: min(38vh, 320px);
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 5em;
+    color: #fff;
+    border: 5px solid rgba(255, 80, 80, 0.85);
+    box-shadow: 0 0 60px rgba(255, 40, 40, 0.6), 0 0 120px rgba(180, 0, 0, 0.4), inset 0 0 40px rgba(0,0,0,0.5);
+  }
+  .exec-hero-name {
+    margin-top: 20px;
+    font-family: 'Cinzel', serif;
+    font-size: 2.6em;
+    font-weight: 700;
+    color: #ff5252;
+    text-shadow: 0 0 24px rgba(255, 40, 40, 0.7), 0 3px 8px rgba(0,0,0,0.8);
+    letter-spacing: 2px;
+  }
+  @keyframes exec-hero {
+    0%   { opacity: 0; transform: scale(0.3); }
+    14%  { opacity: 1; transform: scale(1.05); }
+    24%  { transform: scale(1); }
+    78%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.18); }
+  }
+
+  /* ---- Night-death gallery: portraits of the newly night-killed ---- */
+  #deathGallery {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    background: radial-gradient(ellipse at center, rgba(10,5,20,0.7), rgba(0,0,0,0.92));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.1s ease;
+    backdrop-filter: blur(4px);
+  }
+  #deathGallery.show { opacity: 1; }
+  #deathGallery .gallery-title {
+    font-family: 'Cinzel', serif;
+    font-size: 3em;
+    font-weight: 700;
+    color: #c9b3ff;
+    letter-spacing: 4px;
+    text-shadow: 0 0 30px rgba(150, 100, 255, 0.5);
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  #deathGallery.show .gallery-title { opacity: 0.95; transition-delay: 0.3s; }
+  .gallery-portraits {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    max-width: 90vw;
+  }
+  .gallery-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    opacity: 0;
+    transform: translateY(30px) scale(0.85);
+    filter: grayscale(0.7);
+  }
+  .gallery-figure.reveal {
+    animation: gallery-reveal 1.2s cubic-bezier(0.16, 0.84, 0.3, 1) forwards;
+  }
+  @keyframes gallery-reveal {
+    0%   { opacity: 0; transform: translateY(30px) scale(0.85); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .gallery-portrait {
+    width: min(26vh, 220px);
+    height: min(26vh, 220px);
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 3.4em;
+    color: #fff;
+    border: 4px solid rgba(150, 110, 220, 0.7);
+    box-shadow: 0 0 40px rgba(120, 80, 200, 0.45), inset 0 0 30px rgba(0,0,0,0.55);
+  }
+  .gallery-figure-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8em;
+    color: #d8c8ff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  }
   .exec-fx > * {
     position: absolute;
     left: 0;
@@ -1404,6 +1525,60 @@
     100% { transform: scale(1); }
   }
 
+  /* ---- Countdown timer ---- */
+  #timerDisplay {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    z-index: 90;
+    text-align: center;
+    padding: 18px 40px;
+    background: rgba(20, 10, 5, 0.82);
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    border-radius: 18px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 200, 60, 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    backdrop-filter: blur(6px);
+  }
+  #timerDisplay.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  #timerDisplay .timer-label {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1em;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #d4b483;
+    margin-bottom: 6px;
+  }
+  #timerDisplay .timer-clock {
+    font-family: 'Cinzel', serif;
+    font-size: 4.5em;
+    font-weight: 700;
+    color: #ffd700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 20px rgba(255, 200, 60, 0.6);
+  }
+  /* Last 10s: pulse red for urgency */
+  #timerDisplay.urgent {
+    border-color: rgba(220, 40, 40, 0.8);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 40px rgba(220, 40, 40, 0.5);
+  }
+  #timerDisplay.urgent .timer-clock {
+    color: #ff5252;
+    text-shadow: 0 0 24px rgba(255, 60, 60, 0.8);
+    animation: timer-pulse 1s ease-in-out infinite;
+  }
+  @keyframes timer-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.12); }
+  }
+
   /* ---- Win / end-game banner ---- */
   #winBanner {
     position: fixed;
@@ -1415,6 +1590,7 @@
     opacity: 0;
     pointer-events: none;
     background: radial-gradient(circle at 50% 45%, rgba(10,8,16,0.72) 0%, rgba(4,3,8,0.92) 70%);
+    transition: opacity 1.2s ease;
   }
   #winBanner.show {
     opacity: 1;
@@ -1528,6 +1704,10 @@
     <div class="win-sub">Victory in the Clocktower</div>
   </div>
 </div>
+<div id="timerDisplay">
+  <div class="timer-label">Time Remaining</div>
+  <div class="timer-clock" id="timerClock">0:00</div>
+</div>
 <div id="lobbyQr">
   <div class="lobby-qr-title">Join Game</div>
   <canvas id="lobbyQrCanvas" width="320" height="320"></canvas>
@@ -1605,6 +1785,11 @@
 </div>
 <div id="playersContainer"></div>
 <div id="execFxLayer"></div>
+<div id="execHero"><div class="exec-hero-portrait" id="execHeroPortrait"></div><div class="exec-hero-name" id="execHeroName"></div></div>
+<div id="deathGallery">
+  <div class="gallery-title">Fallen in the Night</div>
+  <div class="gallery-portraits" id="galleryPortraits"></div>
+</div>
 <!-- Ragged-edge filter for the burn FX: fractal noise displaces the burn mask's
      smooth front into a torn, fibrous char line (paper, not clean arcs). The
      seed is re-randomized per burn so no two tears look alike. -->
@@ -2093,6 +2278,13 @@ let execFxActive = {};   // player name -> true while its execution FX plays (bo
 // stays false until the overlay is clicked; playback helpers no-op cleanly
 // before then, and on unlock we prime the tab + kick off the right music.
 let audioUnlocked = false;
+
+// Night 1 is the join-game lobby, so keep its background silent. Sound effects
+// still work after the gesture gate is cleared.
+function isLobbyPhase() {
+  return phase.toLowerCase() === 'night' && Number(phaseNumber) === 1;
+}
+
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -2113,7 +2305,7 @@ function unlockAudio() {
   // Start background music for whatever phase we're already in (phase-change
   // handlers only fire on a transition, which may not happen after load).
   const key = phase.toLowerCase() === 'day' ? 'day' : 'night';
-  if (!currentAudio) {
+  if (!currentAudio && !isLobbyPhase()) {
     playRandomSound(key === 'day' ? 'morning-sounds' : 'night-sounds');
   }
 }
@@ -2166,7 +2358,7 @@ function runPhaseSweep(phaseKey) {
     playRandomSound('morning-sounds');
   } else {
     playSfx('owl-sounds', 0.4, 1500);
-    playRandomSound('night-sounds');
+    if (!isLobbyPhase()) playRandomSound('night-sounds');
   }
 }
 
@@ -2295,6 +2487,42 @@ function pickExecVariant() {
   if (v === lastExecVariant) v = (v + 1 + Math.floor(Math.random() * 3)) % 4;
   lastExecVariant = v;
   return v;
+}
+
+// Fill a round portrait element with a player's photo, or the initials emblem.
+// Shared by the execution hero and the night-death gallery.
+function fillPortrait(el, name, avatarUrl) {
+  if (avatarUrl) {
+    // Set size/repeat/position explicitly — the emblem branch uses the
+    // `background` shorthand, which resets these; a reused element would
+    // otherwise tile the photo at auto size.
+    el.style.backgroundImage = `url(${avatarUrl})`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    el.style.backgroundRepeat = 'no-repeat';
+    el.textContent = '';
+  } else {
+    el.style.backgroundImage = 'none';
+    el.style.background = avatarColor(name);
+    el.textContent = initials(name);
+  }
+}
+
+// Blow the executed player's portrait up center-screen: zoom in, hold, fade.
+// Runs alongside the seat's shatter/fall FX for a dramatic focal point.
+let execHeroTimer = null;
+function showExecHero(name, avatarUrl) {
+  const hero = document.getElementById('execHero');
+  const portrait = document.getElementById('execHeroPortrait');
+  const nameEl = document.getElementById('execHeroName');
+  if (!hero || !portrait || !nameEl) return;
+  fillPortrait(portrait, name, avatarUrl);
+  nameEl.textContent = name;
+  hero.classList.remove('show');
+  void hero.offsetWidth; // restart the animation
+  hero.classList.add('show');
+  if (execHeroTimer) clearTimeout(execHeroTimer);
+  execHeroTimer = setTimeout(() => hero.classList.remove('show'), 2600);
 }
 
 // Apply a player's avatar to an exec-FX token: photo if present, else emblem.
@@ -2565,11 +2793,10 @@ let currentTrack = null;       // path of the loaded track (to avoid repeats on 
 let fadeTimer = null;
 const AUDIO_VOLUME = 0.7;
 
-// Background music plays as a non-repeating shuffled queue: every track in the
-// category plays once before any repeats, and a finished track auto-advances to
-// the next. The queue persists across calls so "change" / track-end just pop it.
-let trackQueue = [];        // shuffled remaining tracks for the current category
-let queueCategory = null;   // category the queue was built for
+// Background music plays from a non-repeating shuffled queue per category. This
+// lets the night queue survive the intervening morning: a track started on an
+// earlier night is not selected again until every night track has been used.
+const trackQueues = new Map(); // category -> shuffled remaining tracks
 
 function shuffleTracks(arr) {
   const a = arr.slice();
@@ -2584,30 +2811,33 @@ function shuffleTracks(arr) {
 // switching category or when it runs dry. `avoid` skips a track at the front so a
 // reshuffle doesn't immediately repeat the one just played.
 function playRandomSound(category, avoid) {
-  if (!audioUnlocked) return Promise.resolve(); // gesture gate not cleared yet
+  if (!audioUnlocked || isLobbyPhase()) return Promise.resolve();
   return fetch(`/api/sounds/${category}`)
     .then(r => r.ok ? r.json() : [])
     .then(files => {
       if (!files || files.length === 0) return;
-      if (queueCategory !== category || trackQueue.length === 0) {
+      let trackQueue = trackQueues.get(category) || [];
+      if (trackQueue.length === 0) {
         trackQueue = shuffleTracks(files);
-        queueCategory = category;
       }
       // Don't start (or restart) on the track we're meant to skip.
       if (avoid && trackQueue.length > 1 && trackQueue[0] === avoid) {
         trackQueue.push(trackQueue.shift());
       }
-      playFromQueue();
+      trackQueues.set(category, trackQueue);
+      playFromQueue(category);
     })
     .catch(e => console.warn('Could not load sounds:', e));
 }
 
 // Play (and consume) the next track in the queue, wiring it to auto-advance.
-function playFromQueue() {
+function playFromQueue(category) {
+  const trackQueue = trackQueues.get(category) || [];
   if (trackQueue.length === 0) return;
   const pick = trackQueue.shift();
+  trackQueues.set(category, trackQueue);
   stopSound();
-  currentCategory = queueCategory;
+  currentCategory = category;
   currentTrack = pick;
   currentAudio = new Audio('/' + pick);
   currentAudio.volume = AUDIO_VOLUME;
@@ -2619,10 +2849,11 @@ function playFromQueue() {
 // A background track finished: advance to the next queued track. When the queue
 // empties, reshuffle the whole category (avoiding an immediate repeat).
 function onTrackEnded() {
+  const trackQueue = trackQueues.get(currentCategory) || [];
   if (trackQueue.length > 0) {
-    playFromQueue();
-  } else if (queueCategory) {
-    playRandomSound(queueCategory, currentTrack);
+    playFromQueue(currentCategory);
+  } else if (currentCategory) {
+    playRandomSound(currentCategory, currentTrack);
   }
 }
 
@@ -2728,6 +2959,20 @@ ws.onmessage = (msg) => {
     handleAudioCommand(data.audioCmd.action);
   }
 
+  // Timer command from controller — nonce-gated so each press fires once
+  if (data.timerCmd && data.timerCmd.nonce !== undefined && data.timerCmd.nonce !== lastTimerNonce) {
+    lastTimerNonce = data.timerCmd.nonce;
+    if (data.timerCmd.action === 'start') startTimer(data.timerCmd.durationMs);
+    else if (data.timerCmd.action === 'cancel') cancelTimer();
+  }
+
+  // Night-death gallery command from controller — nonce-gated
+  if (data.galleryCmd && data.galleryCmd.nonce !== undefined && data.galleryCmd.nonce !== lastGalleryNonce) {
+    lastGalleryNonce = data.galleryCmd.nonce;
+    if (data.galleryCmd.action === 'show') showDeathGallery();
+    else if (data.galleryCmd.action === 'hide') hideDeathGallery();
+  }
+
   // End-game banner — nonce-gated so each declaration fires once
   if (data.gameResult && data.gameResult.nonce !== undefined && data.gameResult.nonce !== lastResultNonce) {
     lastResultNonce = data.gameResult.nonce;
@@ -2738,6 +2983,113 @@ ws.onmessage = (msg) => {
 };
 let lastAudioNonce = null;
 let lastResultNonce = null;
+let lastTimerNonce = null;
+let lastGalleryNonce = null;
+
+// ---- Night-death gallery ----
+// Reveal portraits of players killed in the night (deathCause === 'killed'),
+// one at a time, center screen. Controller drives show/hide. A soft chime
+// plays as each face appears.
+let galleryRevealTimers = [];
+function clearGalleryTimers() {
+  galleryRevealTimers.forEach(t => clearTimeout(t));
+  galleryRevealTimers = [];
+}
+function showDeathGallery() {
+  const overlay = document.getElementById('deathGallery');
+  const wrap = document.getElementById('galleryPortraits');
+  if (!overlay || !wrap) return;
+  // Only players killed in the CURRENT night — diedPhase matches the active
+  // phase number (Night N deaths carry into Day N, which keeps the same number).
+  const dead = players.filter(p => !p.alive && p.deathCause === 'killed' && Number(p.diedPhase) === Number(phaseNumber));
+  clearGalleryTimers();
+  wrap.innerHTML = '';
+  if (dead.length === 0) {
+    // Nothing died — show the overlay with a peaceful message instead.
+    const msg = document.createElement('div');
+    msg.className = 'gallery-figure-name reveal';
+    msg.style.opacity = '1';
+    msg.textContent = 'All survived the night';
+    wrap.appendChild(msg);
+    overlay.classList.add('show');
+    return;
+  }
+  dead.forEach((p) => {
+    const fig = document.createElement('div');
+    fig.className = 'gallery-figure';
+    const portrait = document.createElement('div');
+    portrait.className = 'gallery-portrait';
+    fillPortrait(portrait, p.name, p.avatar);
+    const nameEl = document.createElement('div');
+    nameEl.className = 'gallery-figure-name';
+    nameEl.textContent = p.name;
+    fig.appendChild(portrait);
+    fig.appendChild(nameEl);
+    wrap.appendChild(fig);
+  });
+  overlay.classList.add('show');
+  // Reveal each figure in sequence with a chime.
+  const figures = wrap.querySelectorAll('.gallery-figure');
+  figures.forEach((fig, idx) => {
+    const t = setTimeout(() => {
+      fig.classList.add('reveal');
+      playSfx('death-finalizer-sounds', 0.6);
+    }, 900 + idx * 1400);
+    galleryRevealTimers.push(t);
+  });
+}
+function hideDeathGallery() {
+  const overlay = document.getElementById('deathGallery');
+  if (!overlay) return;
+  clearGalleryTimers();
+  overlay.classList.remove('show');
+}
+
+// ---- Countdown timer ----
+// Controller sends a start command with durationMs; the display runs its own
+// clock and rings the on-block sound at zero. Uses an absolute end time so
+// slow ticks don't accumulate drift.
+let timerEndAt = null;
+let timerRaf = null;
+function fmtTimer(secs) {
+  secs = Math.max(0, Math.ceil(secs));
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+function tickTimer() {
+  const el = document.getElementById('timerDisplay');
+  const clock = document.getElementById('timerClock');
+  if (timerEndAt === null || !el || !clock) return;
+  const remaining = (timerEndAt - Date.now()) / 1000;
+  if (remaining <= 0) {
+    clock.textContent = '0:00';
+    el.classList.remove('urgent');
+    timerEndAt = null;
+    if (timerRaf) { cancelAnimationFrame(timerRaf); timerRaf = null; }
+    // Ring the alarm and hide the overlay shortly after.
+    playSfx('on-block-sounds', 0.7);
+    setTimeout(() => el.classList.remove('show'), 2500);
+    return;
+  }
+  clock.textContent = fmtTimer(remaining);
+  el.classList.toggle('urgent', remaining <= 10);
+  timerRaf = requestAnimationFrame(tickTimer);
+}
+function startTimer(durationMs) {
+  if (!(durationMs > 0)) return;
+  const el = document.getElementById('timerDisplay');
+  timerEndAt = Date.now() + durationMs;
+  if (el) el.classList.add('show');
+  if (timerRaf) cancelAnimationFrame(timerRaf);
+  tickTimer();
+}
+function cancelTimer() {
+  const el = document.getElementById('timerDisplay');
+  timerEndAt = null;
+  if (timerRaf) { cancelAnimationFrame(timerRaf); timerRaf = null; }
+  if (el) el.classList.remove('show', 'urgent');
+}
 
 // Reveal the full-screen victory banner for 'good' | 'evil' (null hides it).
 let winBannerTimer = null;
@@ -2754,7 +3106,7 @@ function showWinBanner(winner) {
   banner.classList.add('show');
   playSfx('death-finalizer-sounds', 0.7);
   if (winBannerTimer) clearTimeout(winBannerTimer);
-  winBannerTimer = setTimeout(() => banner.classList.remove('show', 'evil'), 12000);
+  winBannerTimer = setTimeout(() => banner.classList.remove('show', 'evil'), 10000);
 }
 
 // Count a stat <span> up/down to its new value, with a brief glow pop. No-op if
@@ -2833,6 +3185,10 @@ function render() {
   phaseDisplay.textContent = `${phase} ${phaseNumber}`;
   playersContainer.innerHTML = "";
   updateLobbyQr();
+
+  // A new game returns to Night 1. Stop any music that was playing from the
+  // previous game so the visible JOIN GAME lobby remains silent.
+  if (isLobbyPhase() && currentAudio) stopSound();
 
   // Update theme based on phase
   const phaseKey = phase.toLowerCase() === 'day' ? 'day' : 'night';
@@ -2936,6 +3292,8 @@ function render() {
       if (!p.alive && p.deathCause === 'executed') {
         const name = p.name;
         execFxActive[key] = true;
+        // Giant center portrait for the dramatic focal point.
+        showExecHero(name, p.avatar);
         // spawnExecutionFx plays the variant-matched sound and returns ms until
         // the animation finishes (spirit risen / card reforms).
         const { revealAt, sfx } = spawnExecutionFx(x, y, name, p.avatar);

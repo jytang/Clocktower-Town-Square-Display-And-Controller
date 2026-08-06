@@ -706,6 +706,99 @@
     flex-wrap: wrap;
   }
 
+  .timer-controls {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(139, 69, 19, 0.3);
+    text-align: center;
+  }
+
+  .timer-controls .section-title {
+    font-size: 1.3em;
+    margin-bottom: 15px;
+  }
+
+  .timer-status {
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    color: #d4b483;
+    font-style: italic;
+  }
+
+  .timer-status.running {
+    font-style: normal;
+    color: #ffd700;
+    font-size: 1.4em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timer-preset-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .timer-input-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+  }
+
+  .timer-preset {
+    padding: 6px 16px;
+    font-size: 0.9em;
+  }
+
+  .timer-input {
+    width: 84px;
+    padding: 8px 12px;
+    font-size: 1.2em;
+    text-align: center;
+  }
+
+  .timer-colon {
+    font-size: 1.3em;
+    color: #a08060;
+  }
+
+  .timer-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .gallery-controls {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(139, 69, 19, 0.3);
+    text-align: center;
+  }
+
+  .gallery-controls .section-title {
+    font-size: 1.3em;
+    margin-bottom: 10px;
+  }
+
+  .gallery-hint {
+    margin-bottom: 15px;
+    font-size: 0.85em;
+    color: #a08060;
+    font-style: italic;
+  }
+
+  .gallery-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
   .on-block-controls {
     margin-top: 15px;
     padding-top: 15px;
@@ -836,6 +929,34 @@
       </div>
     </section>
 
+    <section class="timer-controls">
+      <h2 class="section-title">⏱ Timer</h2>
+      <div id="timerStatus" class="timer-status">No timer set</div>
+      <div class="timer-preset-row">
+        <button class="btn timer-preset" data-secs="60">1M</button>
+        <button class="btn timer-preset" data-secs="300">5M</button>
+        <button class="btn timer-preset" data-secs="600">10M</button>
+      </div>
+      <div class="timer-input-row">
+        <input type="number" id="timerMinutes" class="timer-input" min="0" max="99" value="5" aria-label="minutes">
+        <span class="timer-colon">:</span>
+        <input type="number" id="timerSeconds" class="timer-input" min="0" max="59" value="0" aria-label="seconds">
+      </div>
+      <div class="timer-buttons">
+        <button class="btn btn-primary" id="timerStartBtn">▶ Start</button>
+        <button class="btn danger" id="timerCancelBtn">⏹ Cancel</button>
+      </div>
+    </section>
+
+    <section class="gallery-controls">
+      <h2 class="section-title">🌙 Night Deaths</h2>
+      <div class="gallery-hint">Reveal portraits of players killed in the night on the display.</div>
+      <div class="gallery-buttons">
+        <button class="btn btn-primary" id="galleryShowBtn">👁 Reveal</button>
+        <button class="btn" id="galleryHideBtn">✕ Hide</button>
+      </div>
+    </section>
+
   </section>
 
   <section class="players-section">
@@ -881,7 +1002,7 @@ const bulkImportBtn = document.getElementById("bulkImportBtn");
 const clearBulkBtn = document.getElementById("clearBulkBtn");
 
 let players = [];
-let state = { players: [], onBlockPlayer: null, onBlockVotes: 0, nominatedPlayer: null, nominatorPlayer: null, audioCmd: null, nowPlaying: null, gameResult: null };
+let state = { players: [], onBlockPlayer: null, onBlockVotes: 0, nominatedPlayer: null, nominatorPlayer: null, audioCmd: null, timerCmd: null, galleryCmd: null, nowPlaying: null, gameResult: null };
 let previousPhase = null;
 let selectedPlayer = null;
 let nominatingPlayer = null; // index of player whose nominate panel is open
@@ -889,7 +1010,11 @@ let blockingPlayer = null;   // index of player whose put-on-block vote picker i
 let dragIndex = null;
 
 // Replace with your server IP
-const ws = new WebSocket('ws://YOUR_IP:8080');
+const WS_URL = 'ws://YOUR_IP:8080';
+// ws is reassigned on every reconnect, so senders must always read the current
+// socket. connect() is defined below and called once the handlers exist.
+let ws;
+let reconnectTimer = null;
 
 // Set initial game state to Night 1
 phaseSelect.value = 'Night';
@@ -906,22 +1031,44 @@ function updateConnectionStatus(connected) {
   }
 }
 
-ws.onopen = () => {
-  console.log("WebSocket connected!");
-  updateConnectionStatus(true);
-};
+// (Re)connect to the server. On any close/error, retry every 2s until the
+// socket opens again — so the controller survives server restarts, WiFi
+// blips, or laptop sleep without a manual page refresh.
+function scheduleReconnect() {
+  if (reconnectTimer) return; // already pending
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    console.log("Reconnecting...");
+    connect();
+  }, 2000);
+}
 
-ws.onerror = (err) => {
-  console.error("WebSocket error:", err);
-  updateConnectionStatus(false);
-};
+function connect() {
+  ws = new WebSocket(WS_URL);
 
-ws.onclose = () => {
-  console.log("WebSocket closed.");
-  updateConnectionStatus(false);
-};
+  ws.onopen = () => {
+    console.log("WebSocket connected!");
+    updateConnectionStatus(true);
+    // Push our current roster/state so a freshly (re)started server catches up.
+    sendUpdate();
+  };
 
-ws.onmessage = (msg) => {
+  ws.onerror = (err) => {
+    console.error("WebSocket error:", err);
+    updateConnectionStatus(false);
+    // onclose fires after onerror and drives the reconnect.
+  };
+
+  ws.onclose = () => {
+    console.log("WebSocket closed.");
+    updateConnectionStatus(false);
+    scheduleReconnect();
+  };
+
+  ws.onmessage = onWsMessage;
+}
+
+function onWsMessage(msg) {
   const data = JSON.parse(msg.data);
   if (data.players) state.players = data.players;
   if (data.phase) {
@@ -941,7 +1088,9 @@ ws.onmessage = (msg) => {
   if (data.nowPlaying !== undefined) { state.nowPlaying = data.nowPlaying; renderNowPlaying(); }
 
   renderPlayers();
-};
+}
+
+connect();
 
 // Show what the display is currently playing
 function renderNowPlaying() {
@@ -966,6 +1115,8 @@ function sendUpdate() {
     nominatedPlayer: state.nominatedPlayer,
     nominatorPlayer: state.nominatorPlayer,
     audioCmd: state.audioCmd,
+    timerCmd: state.timerCmd,
+    galleryCmd: state.galleryCmd,
     gameResult: state.gameResult
   };
   if (ws.readyState === WebSocket.OPEN) {
@@ -979,6 +1130,65 @@ function sendUpdate() {
 let audioNonce = 0;
 function sendAudioCommand(action) {
   state.audioCmd = { action, nonce: ++audioNonce };
+  sendUpdate();
+}
+
+// Countdown timer. The controller owns the duration; the display runs its own
+// clock off the start command and rings the on-block sound at zero. The
+// controller mirrors the countdown locally for feedback. Nonce-gated like audio.
+let timerNonce = 0;
+let timerEndAt = null;
+let timerTicker = null;
+function fmtTime(secs) {
+  secs = Math.max(0, Math.round(secs));
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+function renderTimerStatus() {
+  const el = document.getElementById('timerStatus');
+  if (!el) return;
+  if (timerEndAt === null) {
+    el.textContent = 'No timer set';
+    el.classList.remove('running');
+    return;
+  }
+  const remaining = (timerEndAt - Date.now()) / 1000;
+  if (remaining <= 0) {
+    el.textContent = "⏰ Time's up!";
+    el.classList.remove('running');
+    if (timerTicker) { clearInterval(timerTicker); timerTicker = null; }
+    timerEndAt = null;
+    return;
+  }
+  el.textContent = '⏱ ' + fmtTime(remaining);
+  el.classList.add('running');
+}
+function startTimer() {
+  const mins = Number(document.getElementById('timerMinutes').value) || 0;
+  const secs = Number(document.getElementById('timerSeconds').value) || 0;
+  const durationMs = (mins * 60 + secs) * 1000;
+  if (durationMs <= 0) return;
+  state.timerCmd = { action: 'start', durationMs, nonce: ++timerNonce };
+  sendUpdate();
+  timerEndAt = Date.now() + durationMs;
+  if (timerTicker) clearInterval(timerTicker);
+  timerTicker = setInterval(renderTimerStatus, 250);
+  renderTimerStatus();
+}
+function cancelTimer() {
+  state.timerCmd = { action: 'cancel', nonce: ++timerNonce };
+  sendUpdate();
+  if (timerTicker) { clearInterval(timerTicker); timerTicker = null; }
+  timerEndAt = null;
+  renderTimerStatus();
+}
+
+// Night-death gallery: tell the display to reveal / hide portraits of players
+// killed in the night. Nonce-gated like audio.
+let galleryNonce = 0;
+function sendGalleryCommand(action) {
+  state.galleryCmd = { action, nonce: ++galleryNonce };
   sendUpdate();
 }
 
@@ -1488,6 +1698,9 @@ function killPlayer(index, cause) {
   const player = state.players[index];
   player.alive = false;
   player.deathCause = cause; // 'executed' or 'killed'
+  // Stamp the phase number so the display's night-death gallery can show only
+  // players killed in the current night, not every past night cumulatively.
+  player.diedPhase = Number(phaseNumber.value);
   // Executing the player on the block clears the block.
   if (state.onBlockPlayer === index) {
     state.onBlockPlayer = null;
@@ -1652,6 +1865,18 @@ document.getElementById("audioChangeBtn").onclick = () => sendAudioCommand('chan
 document.getElementById("audioRestartBtn").onclick = () => sendAudioCommand('restart');
 document.getElementById("audioFadeBtn").onclick = () => sendAudioCommand('fade');
 document.getElementById("audioStopBtn").onclick = () => sendAudioCommand('stop');
+
+document.getElementById("timerStartBtn").onclick = startTimer;
+document.getElementById("timerCancelBtn").onclick = cancelTimer;
+document.getElementById("galleryShowBtn").onclick = () => sendGalleryCommand('show');
+document.getElementById("galleryHideBtn").onclick = () => sendGalleryCommand('hide');
+document.querySelectorAll('.timer-preset').forEach(btn => {
+  btn.onclick = () => {
+    const secs = Number(btn.dataset.secs) || 0;
+    document.getElementById('timerMinutes').value = Math.floor(secs / 60);
+    document.getElementById('timerSeconds').value = secs % 60;
+  };
+});
 
 document.getElementById("goodWinsBtn").onclick = () => declareWinner('good');
 document.getElementById("evilWinsBtn").onclick = () => declareWinner('evil');
