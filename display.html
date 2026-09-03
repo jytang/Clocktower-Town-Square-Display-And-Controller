@@ -2841,6 +2841,7 @@ let currentAudio = null;       // the <audio> element currently loaded
 let currentCategory = null;    // category it was picked from (for "change")
 let currentTrack = null;       // path of the loaded track (to avoid repeats on change)
 let fadeTimer = null;
+let lobbyNightMusicSelected = false;
 const AUDIO_VOLUME = 0.7;
 
 // Background music plays from a non-repeating shuffled queue per category. This
@@ -2986,7 +2987,10 @@ function handleAudioCommand(cmd) {
     case 'restart': restartSound(); break;
     case 'stop':    stopSound(); break;
     case 'change':  changeSound(); break;
-    case 'night':   playRandomSound('night-sounds'); break;
+    case 'night':
+      lobbyNightMusicSelected = isLobbyPhase();
+      playRandomSound('night-sounds');
+      break;
   }
 }
 
@@ -3292,10 +3296,12 @@ function render() {
   // Update theme based on phase
   const phaseKey = phase.toLowerCase() === 'day' ? 'day' : 'night';
 
+  if (!isLobbyPhase()) lobbyNightMusicSelected = false;
+
   // A new game returns to Night 1. Replace any music from the previous game
   // with the dedicated lobby playlist. Phase transitions are handled by the
   // sweep below, which avoids consuming two lobby tracks at once.
-  if (isLobbyPhase() && audioUnlocked &&
+  if (isLobbyPhase() && !lobbyNightMusicSelected && audioUnlocked &&
       (!currentAudio || currentCategory !== 'lobby-sounds') &&
       (firstRender || prevPhaseKey === phaseKey)) {
     stopSound();
