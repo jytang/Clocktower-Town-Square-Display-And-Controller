@@ -3133,6 +3133,24 @@ function hideDeathGallery() {
 // slow ticks don't accumulate drift.
 let timerEndAt = null;
 let timerRaf = null;
+let timerAlarmTimeouts = [];
+function clearTimerAlarm() {
+  timerAlarmTimeouts.forEach(clearTimeout);
+  timerAlarmTimeouts = [];
+}
+function playTimerAlarm() {
+  clearTimerAlarm();
+  fetch('/api/sounds/on-block-sounds')
+    .then(r => r.ok ? r.json() : [])
+    .then(files => {
+      if (!files || files.length === 0) return;
+      const pick = files[Math.floor(Math.random() * files.length)];
+      [0, 1000, 2000].forEach(delay => {
+        timerAlarmTimeouts.push(setTimeout(() => playSfxFile(pick, 0.7), delay));
+      });
+    })
+    .catch(e => console.warn('Could not load timer alarm:', e));
+}
 function fmtTimer(secs) {
   secs = Math.max(0, Math.ceil(secs));
   const m = Math.floor(secs / 60);
@@ -3149,8 +3167,8 @@ function tickTimer() {
     el.classList.remove('urgent');
     timerEndAt = null;
     if (timerRaf) { cancelAnimationFrame(timerRaf); timerRaf = null; }
-    // Ring the alarm and hide the overlay shortly after.
-    playSfx('on-block-sounds', 0.7);
+    // Ring the same alarm three times, one second apart.
+    playTimerAlarm();
     setTimeout(() => el.classList.remove('show'), 2500);
     return;
   }
@@ -3161,6 +3179,7 @@ function tickTimer() {
 function startTimer(durationMs) {
   if (!(durationMs > 0)) return;
   const el = document.getElementById('timerDisplay');
+  clearTimerAlarm();
   timerEndAt = Date.now() + durationMs;
   if (el) el.classList.add('show');
   if (timerRaf) cancelAnimationFrame(timerRaf);
@@ -3169,6 +3188,7 @@ function startTimer(durationMs) {
 function cancelTimer() {
   const el = document.getElementById('timerDisplay');
   timerEndAt = null;
+  clearTimerAlarm();
   if (timerRaf) { cancelAnimationFrame(timerRaf); timerRaf = null; }
   if (el) el.classList.remove('show', 'urgent');
 }
@@ -3562,18 +3582,12 @@ function render() {
   prevOnBlockPlayer = (phase.toLowerCase() === 'day') ? onBlockPlayer : null;
   buildAmbientMotes();
   updateTurnGlow(playerPositions);
-  const wasFirstRender = firstRender;
   firstRender = false;
 
   // Animate the hands spinning in only when the nomination pair is newly set
   const nominationKey = (phaseKey === 'day' && nominatorPlayer !== null && nominatedPlayer !== null)
     ? `${nominatorPlayer}>${nominatedPlayer}` : null;
   const animateHands = nominationKey !== null && nominationKey !== prevNominationKey;
-  // On a freshly-set nomination (not on page load), play a nomination sound that
-  // smoothly accelerates from 1x to 2.5x across the whole clip.
-  if (animateHands && !wasFirstRender) {
-    playSfxRamp('nomination-sounds', 0.7);
-  }
   prevNominationKey = nominationKey;
 
   drawClockHands(playerPositions, centerX, centerY, animateHands);
