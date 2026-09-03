@@ -3134,28 +3134,11 @@ function hideDeathGallery() {
 
 // ---- Countdown timer ----
 // Controller sends a start command with durationMs; the display runs its own
-// clock and rings the on-block sound at zero. Uses an absolute end time so
+// clock and plays a pre-alert at 10 seconds plus an alarm at zero. Uses an absolute end time so
 // slow ticks don't accumulate drift.
 let timerEndAt = null;
 let timerRaf = null;
-let timerAlarmTimeouts = [];
-function clearTimerAlarm() {
-  timerAlarmTimeouts.forEach(clearTimeout);
-  timerAlarmTimeouts = [];
-}
-function playTimerAlarm() {
-  clearTimerAlarm();
-  fetch('/api/sounds/on-block-sounds')
-    .then(r => r.ok ? r.json() : [])
-    .then(files => {
-      if (!files || files.length === 0) return;
-      const pick = files[Math.floor(Math.random() * files.length)];
-      [0, 1000, 2000].forEach(delay => {
-        timerAlarmTimeouts.push(setTimeout(() => playSfxFile(pick, 0.7), delay));
-      });
-    })
-    .catch(e => console.warn('Could not load timer alarm:', e));
-}
+let timerPreSoundPending = false;
 function fmtTimer(secs) {
   secs = Math.max(0, Math.ceil(secs));
   const m = Math.floor(secs / 60);
@@ -3172,19 +3155,22 @@ function tickTimer() {
     el.classList.remove('urgent');
     timerEndAt = null;
     if (timerRaf) { cancelAnimationFrame(timerRaf); timerRaf = null; }
-    // Ring the same alarm three times, one second apart.
-    playTimerAlarm();
+    playSfx('timer-sounds', 0.7);
     setTimeout(() => el.classList.remove('show'), 2500);
     return;
   }
   clock.textContent = fmtTimer(remaining);
+  if (timerPreSoundPending && remaining <= 10) {
+    timerPreSoundPending = false;
+    playSfx('timer-pre-sounds', 0.7);
+  }
   el.classList.toggle('urgent', remaining <= 10);
   timerRaf = requestAnimationFrame(tickTimer);
 }
 function startTimer(durationMs) {
   if (!(durationMs > 0)) return;
   const el = document.getElementById('timerDisplay');
-  clearTimerAlarm();
+  timerPreSoundPending = durationMs > 10_000;
   timerEndAt = Date.now() + durationMs;
   if (el) el.classList.add('show');
   if (timerRaf) cancelAnimationFrame(timerRaf);
@@ -3193,7 +3179,7 @@ function startTimer(durationMs) {
 function cancelTimer() {
   const el = document.getElementById('timerDisplay');
   timerEndAt = null;
-  clearTimerAlarm();
+  timerPreSoundPending = false;
   if (timerRaf) { cancelAnimationFrame(timerRaf); timerRaf = null; }
   if (el) el.classList.remove('show', 'urgent');
 }
