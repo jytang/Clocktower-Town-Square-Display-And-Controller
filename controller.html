@@ -922,6 +922,7 @@
       <h2 class="section-title">🎵 Sound</h2>
       <div id="nowPlaying" class="now-playing">Nothing playing</div>
       <div class="audio-buttons">
+        <button class="btn" id="audioNightBtn">🌙 Night Music</button>
         <button class="btn" id="audioChangeBtn">🔀 Change</button>
         <button class="btn" id="audioRestartBtn">⏮ Restart</button>
         <button class="btn" id="audioFadeBtn">🔉 Fade Out</button>
@@ -1873,6 +1874,7 @@ phaseSelect.addEventListener("change", sendUpdate);
 phaseNumber.addEventListener("input", sendUpdate);
 
 document.getElementById("audioChangeBtn").onclick = () => sendAudioCommand('change');
+document.getElementById("audioNightBtn").onclick = () => sendAudioCommand('night');
 document.getElementById("audioRestartBtn").onclick = () => sendAudioCommand('restart');
 document.getElementById("audioFadeBtn").onclick = () => sendAudioCommand('fade');
 document.getElementById("audioStopBtn").onclick = () => sendAudioCommand('stop');
